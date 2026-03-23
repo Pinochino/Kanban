@@ -1,0 +1,1 @@
+const deploy = document.getElementById("deploy")
