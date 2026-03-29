@@ -4,6 +4,7 @@ import com.example.trello.dto.request.LoginRequest;
 import com.example.trello.dto.request.RegisterRequest;
 import com.example.trello.dto.response.AccountResponse;
 import com.example.trello.dto.response.AppResponse;
+import com.example.trello.dto.response.LoginResponse;
 import com.example.trello.service.auth.AuthService;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
@@ -26,8 +27,8 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AppResponse<AccountResponse>> login(@Valid @RequestBody LoginRequest request) {
-        AccountResponse accountResponse = authService.authenticate(request);
+    public ResponseEntity<AppResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
+        LoginResponse accountResponse = authService.authenticate(request);
         return ResponseEntity.ok().body(new AppResponse<>(200, "Login Successful", accountResponse));
     }
 

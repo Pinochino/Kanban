@@ -1,6 +1,7 @@
 package com.example.trello.config;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -15,6 +16,12 @@ import java.time.Duration;
 @Slf4j
 public class RedisConfig {
 
+    @Value("${spring.data.redis.port}")
+    private int port;
+
+    @Value("${spring.data.redis.host}")
+    private String hostName;
+
     @Bean
     public LettuceConnectionFactory lettuceConnectionFactory() {
 
@@ -24,7 +31,7 @@ public class RedisConfig {
                 .shutdownTimeout(Duration.ZERO)
                 .build();
 
-        RedisStandaloneConfiguration configuration = new RedisStandaloneConfiguration("localhost", 6379);
+        RedisStandaloneConfiguration configuration = new RedisStandaloneConfiguration(hostName, port);
 
         log.info("Connecting to Redis successfully at {}", configuration.getPort());
 

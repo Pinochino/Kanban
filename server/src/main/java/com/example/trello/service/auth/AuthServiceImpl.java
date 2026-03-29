@@ -5,6 +5,7 @@ import com.example.trello.constants.RoleName;
 import com.example.trello.dto.request.LoginRequest;
 import com.example.trello.dto.request.RegisterRequest;
 import com.example.trello.dto.response.AccountResponse;
+import com.example.trello.dto.response.LoginResponse;
 import com.example.trello.exception.AppError;
 import com.example.trello.mapper.AccountMapper;
 import com.example.trello.model.Account;
@@ -12,6 +13,7 @@ import com.example.trello.model.Role;
 import com.example.trello.repository.RoleRepository;
 import com.example.trello.repository.AccountRepository;
 import com.example.trello.security.CustomUserDetail;
+import com.example.trello.service.jwt.JwtService;
 import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
@@ -34,18 +36,21 @@ public class AuthServiceImpl implements AuthService {
     PasswordEncoder passwordEncoder;
     AccountMapper accountMapper;
     AuthenticationManager authenticationManager;
+    JwtService jwtService;
 
     @Autowired
     public AuthServiceImpl(AccountRepository accountRepository,
                            RoleRepository roleRepository,
                            PasswordEncoder passwordEncoder,
                            AccountMapper accountMapper,
-                           AuthenticationManager authenticationManager) {
+                           AuthenticationManager authenticationManager,
+                           JwtService jwtService) {
         this.accountRepository = accountRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
         this.accountMapper = accountMapper;
         this.authenticationManager = authenticationManager;
+        this.jwtService = jwtService;
     }
 
     @Override
@@ -80,7 +85,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public AccountResponse authenticate(LoginRequest request) {
+    public LoginResponse authenticate(LoginRequest request) {
 
         Authentication authenticationRequest = UsernamePasswordAuthenticationToken
                 .unauthenticated(
@@ -104,7 +109,15 @@ public class AuthServiceImpl implements AuthService {
             throw new AppError(ErrorCode.INVALID_CREDENTIALS);
         }
 
-        return accountMapper.toResponse(accountLogin);
+        AccountResponse accountResponse = accountMapper.toResponse(accountLogin);
+        String accessToken = jwtService.generateAccessToken(accountLogin);
+        String refreshToken = jwtService.generateRefreshToken();
+
+        return LoginResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .account(accountResponse)
+                .build();
     }
 
 }
