@@ -12,7 +12,7 @@ import lombok.experimental.FieldDefaults;
 @Setter
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Builder
-public class CreateUserRequest {
+public class RegisterRequest {
 
     @NotBlank(message = "Username is mandatory")
     @Size(min = 3, message = "Username has at least {} characters")

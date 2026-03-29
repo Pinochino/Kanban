@@ -1,0 +1,55 @@
+package com.example.trello.service.account;
+
+import com.example.trello.constants.ErrorCode;
+import com.example.trello.dto.response.AccountResponse;
+import com.example.trello.exception.AppError;
+import com.example.trello.mapper.AccountMapper;
+import com.example.trello.model.Account;
+import com.example.trello.repository.AccountRepository;
+import jakarta.transaction.Transactional;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+public class AccountServiceImpl extends AccountService {
+
+    AccountRepository accountRepository;
+    AccountMapper accountMapper;
+
+    @Autowired
+    public AccountServiceImpl(AccountRepository accountRepository,
+                              AccountMapper accountMapper) {
+        this.accountRepository = accountRepository;
+        this.accountMapper = accountMapper;
+    }
+
+    @Override
+    public List<AccountResponse> getAccounts() {
+        return accountRepository.findAll().stream().map(accountMapper::toResponse).toList();
+    }
+
+    @Override
+    public AccountResponse getAccount(Long id) {
+        Account account = accountRepository.findById(id).orElseThrow(() -> new AppError(ErrorCode.USER_NOT_FOUND));
+        return accountMapper.toResponse(account);
+    }
+
+    @Transactional
+    @Override
+    public void deleteAccount(Long id) {
+        Account account = accountRepository.findById(id).orElseThrow(() -> new AppError(ErrorCode.USER_NOT_FOUND));
+        accountRepository.delete(account);
+    }
+
+    @Transactional
+    @Override
+    public void deleteAccounts() {
+        accountRepository.deleteAll();
+    }
+
+}

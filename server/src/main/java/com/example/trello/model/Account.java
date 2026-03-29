@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -11,14 +12,15 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-@Table(name = "users")
+@Table(name = "accounts")
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Builder
-public class User extends AbstractEntity implements Serializable {
+@EntityListeners(AuditingEntityListener.class)
+public class Account extends AbstractEntity implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -29,6 +31,7 @@ public class User extends AbstractEntity implements Serializable {
 
     String username;
 
+    @Column(unique = true)
     String email;
 
     String password;
@@ -38,14 +41,15 @@ public class User extends AbstractEntity implements Serializable {
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id"))
     @JsonManagedReference
+    @Builder.Default
     Set<Role> roles = new HashSet<>();
 
     public void addRole(Role role) {
-        roles.add(role);
+        this.roles.add(role);
     }
 
     public void removeRole(Role role) {
-        roles.remove(role);
+        this.roles.remove(role);
     }
 
 }

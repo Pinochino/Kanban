@@ -1,6 +1,6 @@
 package com.example.trello.security;
 
-import com.example.trello.model.User;
+import com.example.trello.model.Account;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import org.jspecify.annotations.Nullable;
@@ -18,16 +18,16 @@ import java.util.stream.Collectors;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CustomUserDetail implements UserDetails, CredentialsContainer {
 
-    User user;
+    Account account;
     String prefixRole = "ROLE_";
 
-    public CustomUserDetail(User user) {
-        this.user = user;
+    public CustomUserDetail(Account account) {
+        this.account = account;
     }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return user.getRoles()
+        return account.getRoles()
                 .stream()
                 .map(role -> new SimpleGrantedAuthority(prefixRole + role.getName()))
                 .collect(Collectors.toList());
@@ -35,12 +35,12 @@ public class CustomUserDetail implements UserDetails, CredentialsContainer {
 
     @Override
     public @Nullable String getPassword() {
-        return user.getPassword();
+        return account.getPassword();
     }
 
     @Override
-    public String getUsername() {
-        return user.getEmail();
+    public  String getUsername() {
+        return account.getEmail();
     }
 
     @Override
@@ -65,7 +65,7 @@ public class CustomUserDetail implements UserDetails, CredentialsContainer {
 
     @Override
     public void eraseCredentials() {
-        this.user.setPassword(null);
+        this.account.setPassword(null);
     }
 
 }

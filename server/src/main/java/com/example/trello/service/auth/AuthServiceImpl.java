@@ -2,18 +2,24 @@ package com.example.trello.service.auth;
 
 import com.example.trello.constants.ErrorCode;
 import com.example.trello.constants.RoleName;
-import com.example.trello.dto.request.CreateUserRequest;
-import com.example.trello.dto.response.UserResponse;
+import com.example.trello.dto.request.LoginRequest;
+import com.example.trello.dto.request.RegisterRequest;
+import com.example.trello.dto.response.AccountResponse;
 import com.example.trello.exception.AppError;
-import com.example.trello.mapper.UserMapper;
+import com.example.trello.mapper.AccountMapper;
+import com.example.trello.model.Account;
 import com.example.trello.model.Role;
-import com.example.trello.model.User;
 import com.example.trello.repository.RoleRepository;
-import com.example.trello.repository.UserRepository;
+import com.example.trello.repository.AccountRepository;
+import com.example.trello.security.CustomUserDetail;
 import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -23,25 +29,34 @@ import java.util.Optional;
 @FieldDefaults(level = AccessLevel.PACKAGE, makeFinal = true)
 public class AuthServiceImpl implements AuthService {
 
-    UserRepository userRepository;
+    AccountRepository accountRepository;
     RoleRepository roleRepository;
     PasswordEncoder passwordEncoder;
-    UserMapper userMapper;
+    AccountMapper accountMapper;
+    AuthenticationManager authenticationManager;
 
     @Autowired
-    public AuthServiceImpl(UserRepository userRepository,
+    public AuthServiceImpl(AccountRepository accountRepository,
                            RoleRepository roleRepository,
                            PasswordEncoder passwordEncoder,
-                           UserMapper userMapper) {
-        this.userRepository = userRepository;
+                           AccountMapper accountMapper,
+                           AuthenticationManager authenticationManager) {
+        this.accountRepository = accountRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
-        this.userMapper = userMapper;
+        this.accountMapper = accountMapper;
+        this.authenticationManager = authenticationManager;
+    }
+
+    @Override
+    public Account findUserByEmail(String email) {
+        return accountRepository.findUserByEmail(email).orElseThrow(() -> new AppError(ErrorCode.USER_NOT_FOUND));
     }
 
     @Transactional
-    public UserResponse createUser(CreateUserRequest request) {
-        Optional<User> user = userRepository.findUserByEmail(request.getEmail());
+    @Override
+    public AccountResponse createUser(RegisterRequest request) {
+        Optional<Account> user = accountRepository.findUserByEmail(request.getEmail());
 
         if (user.isPresent()) {
             throw new AppError(ErrorCode.USER_ALREADY_EXIST);
@@ -55,17 +70,41 @@ public class AuthServiceImpl implements AuthService {
         }));
 
 
-        User newUser = userMapper.toUser(request);
-        newUser.setPassword(passwordEncoder.encode(request.getPassword()));
-        newUser.addRole(role.get());
+        Account newAccount = accountMapper.toUser(request);
+        newAccount.setPassword(passwordEncoder.encode(request.getPassword()));
+        newAccount.addRole(role.get());
 
-        userRepository.save(newUser);
+        accountRepository.save(newAccount);
 
-        return userMapper.toResponse(newUser);
+        return accountMapper.toResponse(newAccount);
     }
 
-    public UserResponse authenticate() {
-        return null;
+    @Override
+    public AccountResponse authenticate(LoginRequest request) {
+
+        Authentication authenticationRequest = UsernamePasswordAuthenticationToken
+                .unauthenticated(
+                        request.getEmail(),
+                        request.getPassword()
+                );
+
+        if (authenticationManager == null) {
+            throw new AppError(ErrorCode.INVALID_CREDENTIALS);
+        }
+
+        Authentication authenticated = this.authenticationManager.authenticate(authenticationRequest);
+
+        SecurityContextHolder.getContext().setAuthentication(authenticated);
+
+        CustomUserDetail userDetail = (CustomUserDetail) authenticated.getPrincipal();
+
+        Account accountLogin = userDetail.getAccount();
+
+        if (accountLogin == null) {
+            throw new AppError(ErrorCode.INVALID_CREDENTIALS);
+        }
+
+        return accountMapper.toResponse(accountLogin);
     }
 
 }
