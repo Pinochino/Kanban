@@ -15,6 +15,7 @@ public enum ErrorCode {
     USER_ALREADY_EXIST(100, "User already existed", HttpStatus.CONFLICT),
     INVALID_CREDENTIALS(101, "Invalid credentials", HttpStatus.UNAUTHORIZED),
     USER_NOT_FOUND(102, "User Not Found", HttpStatus.NOT_FOUND),
+    INVALID_TOKEN(103, "Invalid token", HttpStatus.UNAUTHORIZED),
 
     ;
 

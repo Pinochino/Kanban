@@ -22,6 +22,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 
 
 @Configuration
@@ -33,10 +34,13 @@ public class SecurityConfig {
             "/auth/**",
 
     };
+    private final JwtDecoderConfig jwtDecoderConfig;
 
     @Autowired
-    public SecurityConfig(CustomAuthenticationEntryPoint authenticationEntryPoint) {
+    public SecurityConfig(CustomAuthenticationEntryPoint authenticationEntryPoint,
+                          JwtDecoderConfig jwtDecoderConfig) {
         this.authenticationEntryPoint = authenticationEntryPoint;
+        this.jwtDecoderConfig = jwtDecoderConfig;
     }
 
     @Bean
@@ -50,7 +54,9 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .httpBasic(Customizer.withDefaults())
-                .oauth2ResourceServer((oauth2) -> oauth2.jwt(Customizer.withDefaults()))
+                .oauth2ResourceServer((oauth2) -> oauth2
+                        .jwt(jwtConfigurer ->
+                                jwtConfigurer.decoder(jwtDecoderConfig)))
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(authenticationEntryPoint))
                 .build();
     }
@@ -66,18 +72,6 @@ public class SecurityConfig {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetails);
         provider.setPasswordEncoder(passwordEncoder);
         return new ProviderManager(provider);
-    }
-
-    @Bean
-    public JwtDecoder jwtDecoder() {
-
-        String key = "123456789";
-        SecretKey secretKey = new SecretKeySpec(key.getBytes(StandardCharsets.UTF_8), "HS512");
-
-        return NimbusJwtDecoder
-                .withSecretKey(secretKey)
-                .macAlgorithm(MacAlgorithm.HS512)
-                .build();
     }
 
 
