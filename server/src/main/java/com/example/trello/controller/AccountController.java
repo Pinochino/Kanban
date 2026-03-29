@@ -2,7 +2,6 @@ package com.example.trello.controller;
 
 import com.example.trello.dto.response.AccountResponse;
 import com.example.trello.dto.response.AppResponse;
-import com.example.trello.model.Account;
 import com.example.trello.service.account.AccountService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
