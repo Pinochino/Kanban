@@ -13,15 +13,34 @@ import lombok.experimental.FieldDefaults;
 @Builder
 public class AppResponse<T> {
 
+    long timestamp;
+
     int code;
 
     String message;
 
+    String stacktrace;
+
     T data;
 
     public AppResponse(int code, String message) {
+        this.timestamp = System.currentTimeMillis();
         this.code = code;
         this.message = message;
+    }
+
+    public AppResponse(int code, String message, String stacktrace) {
+        this.timestamp = System.currentTimeMillis();
+        this.code = code;
+        this.message = message;
+        this.stacktrace = stacktrace;
+    }
+
+    public AppResponse(int code, String message, T data) {
+        this.timestamp = System.currentTimeMillis();
+        this.code = code;
+        this.message = message;
+        this.data = data;
     }
 
 }

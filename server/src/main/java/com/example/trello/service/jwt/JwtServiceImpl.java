@@ -1,11 +1,15 @@
 package com.example.trello.service.jwt;
 
+import com.example.trello.dto.response.JwtInfo;
 import com.example.trello.model.Account;
+import com.example.trello.model.RedisToken;
+import com.example.trello.repository.RedisTokenRepository;
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.crypto.MACVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -14,12 +18,24 @@ import java.text.ParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Date;
+import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class JwtServiceImpl implements JwtService {
 
     @Value("${JWT_ACCESS_KEY}")
     String secretKey;
+
+    @Value("${JWT_ACCESS_EXPIRE}")
+    long issuerToken;
+
+    RedisTokenRepository redisTokenRepository;
+
+    @Autowired
+    public JwtServiceImpl(RedisTokenRepository redisTokenRepository) {
+        this.redisTokenRepository = redisTokenRepository;
+    }
 
 
     @Override
@@ -29,13 +45,14 @@ public class JwtServiceImpl implements JwtService {
         JWSHeader header = new JWSHeader(JWSAlgorithm.HS512);
 
         Date issueTime = new Date();
-        Date expiredTime = Date.from(issueTime.toInstant().plus(30, ChronoUnit.MINUTES));
+        Date expiredTime = Date.from(issueTime.toInstant().plus(issuerToken, ChronoUnit.MINUTES));
 
 //        PAYLOAD
         JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
                 .subject(account.getEmail())
                 .issueTime(issueTime)
                 .expirationTime(expiredTime)
+                .jwtID(UUID.randomUUID().toString())
                 .build();
 
         Payload payload = new Payload(claimsSet.toJSONObject());
@@ -70,8 +87,35 @@ public class JwtServiceImpl implements JwtService {
             return false;
         }
 
+        String jwtId = signedJWT.getJWTClaimsSet().getJWTID();
+
+        Optional<RedisToken> byId = redisTokenRepository.findById(jwtId);
+
+        if (byId.isPresent()) {
+            throw new RuntimeException("JWT invalid");
+        }
+
         return signedJWT.verify(new MACVerifier(secretKey));
     }
 
+    @Override
+    public JwtInfo parseToken(String token) {
 
+        try {
+            SignedJWT signedJWT = SignedJWT.parse(token);
+
+            String jwtId = signedJWT.getJWTClaimsSet().getJWTID();
+            Date issueTime = signedJWT.getJWTClaimsSet().getIssueTime();
+            Date expiredTime = signedJWT.getJWTClaimsSet().getExpirationTime();
+
+            return JwtInfo.builder()
+                    .jwtId(jwtId)
+                    .issueTime(issueTime)
+                    .expiredTime(expiredTime)
+                    .build();
+
+        } catch (ParseException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }

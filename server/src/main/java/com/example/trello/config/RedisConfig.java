@@ -33,9 +33,7 @@ public class RedisConfig {
 
         RedisStandaloneConfiguration configuration = new RedisStandaloneConfiguration(hostName, port);
 
-        log.info("Connecting to Redis successfully at {}", configuration.getPort());
-
-        return new LettuceConnectionFactory(configuration, clientConfig);
+        return new LettuceConnectionFactory(configuration);
     }
 
     @Bean

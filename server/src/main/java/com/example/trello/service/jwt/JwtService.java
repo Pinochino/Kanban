@@ -1,5 +1,6 @@
 package com.example.trello.service.jwt;
 
+import com.example.trello.dto.response.JwtInfo;
 import com.example.trello.model.Account;
 import com.nimbusds.jose.JOSEException;
 
@@ -11,4 +12,6 @@ public interface JwtService {
     String generateRefreshToken();
 
     boolean verifyToken(String token) throws ParseException, JOSEException;
+
+    JwtInfo parseToken(String token);
 }
