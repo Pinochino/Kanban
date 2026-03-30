@@ -1,5 +1,6 @@
 package com.example.trello.dto.request;
 
+import com.example.trello.constants.ErrorCode;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -14,16 +15,16 @@ import lombok.experimental.FieldDefaults;
 @Builder
 public class RegisterRequest {
 
-    @NotBlank(message = "Username is mandatory")
+    @NotBlank(message = "USERNAME_IS_MANDATORY")
     @Size(min = 3, message = "Username has at least {} characters")
     String username;
 
-    @NotBlank(message = "Email is mandatory")
+    @NotBlank(message = "EMAIL_IS_MANDATORY")
     @Email(message = "Email is not valid format")
     String email;
 
-    @NotBlank(message = "Password is mandatory")
-    @Size(min = 4, message = "Password has at least {} characters")
+    @NotBlank(message = "PASSWORD_IS_MANDATORY")
+    @Size(min = 4, max = 6, message = "INVALID_PASSWORD")
     String password;
 
 }
