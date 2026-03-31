@@ -42,8 +42,12 @@ public class JwtDecoderConfig implements JwtDecoder {
 
     @Override
     public Jwt decode(String token) throws JwtException {
-
         log.info("Decoding token: {}", token);
+
+        // ✅ Thêm null check
+        if (token == null) {
+            throw new JwtException("Token is null");
+        }
 
         try {
             if (!jwtService.verifyToken(token)) {
@@ -51,18 +55,16 @@ public class JwtDecoderConfig implements JwtDecoder {
             }
 
             if (Objects.isNull(nimbusJwtDecoder)) {
-
-                SecretKey secretKey1 = new SecretKeySpec(secretKey.getBytes(StandardCharsets.UTF_8), "HS512");
-
+                SecretKey secretKey1 = new SecretKeySpec(
+                        secretKey.getBytes(StandardCharsets.UTF_8), "HS512"
+                );
                 nimbusJwtDecoder = NimbusJwtDecoder
                         .withSecretKey(secretKey1)
                         .macAlgorithm(MacAlgorithm.HS512)
                         .build();
             }
 
-        } catch (ParseException e) {
-            throw new RuntimeException(e);
-        } catch (JOSEException e) {
+        } catch (ParseException | JOSEException e) {
             throw new RuntimeException(e);
         }
 

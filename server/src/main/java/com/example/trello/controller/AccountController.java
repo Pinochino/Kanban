@@ -2,9 +2,16 @@ package com.example.trello.controller;
 
 import com.example.trello.dto.response.AccountResponse;
 import com.example.trello.dto.response.AppResponse;
+import com.example.trello.model.Account;
+import com.example.trello.security.CustomUserDetail;
 import com.example.trello.service.account.AccountService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -12,6 +19,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/accounts")
 @CrossOrigin
+@Slf4j
 public class AccountController {
 
     private AccountService accountService;
@@ -24,12 +32,20 @@ public class AccountController {
     @GetMapping("/list")
     public ResponseEntity<AppResponse<List<AccountResponse>>> getAccounts() {
         List<AccountResponse> accounts = accountService.getAccounts();
+
+
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Jwt jwt = (Jwt) auth.getPrincipal();
+
+        String email = jwt.getSubject(); // sub
+        List<String> roles = jwt.getClaimAsStringList("roles");
         return ResponseEntity.ok().body(new AppResponse<>(200, "Get accounts", accounts));
     }
 
     @GetMapping("/detail/{id}")
     public ResponseEntity<AppResponse<AccountResponse>> getAccount(@PathVariable Long id) {
         AccountResponse accountResponse = accountService.getAccount(id);
+
         return ResponseEntity.ok().body(new AppResponse<>(200, "Get account", accountResponse));
     }
 

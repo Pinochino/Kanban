@@ -1,16 +1,19 @@
 package com.example.trello.service.jwt;
 
+import com.example.trello.constants.RoleName;
 import com.example.trello.constants.TokenType;
 import com.example.trello.dto.response.JwtInfo;
 import com.example.trello.dto.response.TokenPayload;
 import com.example.trello.model.Account;
 import com.example.trello.model.RedisToken;
+import com.example.trello.model.Role;
 import com.example.trello.repository.RedisTokenRepository;
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.crypto.MACVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import jakarta.mail.search.SearchTerm;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -19,10 +22,8 @@ import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.text.ParseException;
 import java.time.temporal.ChronoUnit;
-import java.util.Base64;
-import java.util.Date;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class JwtServiceImpl implements JwtService {
@@ -51,12 +52,15 @@ public class JwtServiceImpl implements JwtService {
         Date expiredTime = Date.from(issueTime.toInstant().plus(issuerToken, ChronoUnit.SECONDS));
         String jwtId = UUID.randomUUID().toString();
 
+        Set<String> roles = account.getRoles().stream().map(role -> role.getName().name()).collect(Collectors.toSet());
+
 //        PAYLOAD
         JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
                 .subject(account.getEmail())
                 .issueTime(issueTime)
                 .expirationTime(expiredTime)
                 .jwtID(jwtId)
+                .claim("roles", roles)
                 .build();
 
         Payload payload = new Payload(claimsSet.toJSONObject());
