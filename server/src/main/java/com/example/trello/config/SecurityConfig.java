@@ -22,7 +22,7 @@ public class SecurityConfig {
 
     private final CustomAuthenticationEntryPoint authenticationEntryPoint;
     private static final String[] WHITE_LIST = {
-            "/auth/**",
+            "/api/auth/**",
 
     };
     private final JwtDecoderConfig jwtDecoderConfig;
@@ -37,6 +37,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain configure(HttpSecurity http) throws Exception {
         return http
+                .securityMatcher("/api/auth/**")
                 .authorizeHttpRequests(authorizeRequests -> {
                     authorizeRequests
                             .requestMatchers(WHITE_LIST).permitAll()

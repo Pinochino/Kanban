@@ -1,6 +1,8 @@
 package com.example.trello.service.jwt;
 
+import com.example.trello.constants.TokenType;
 import com.example.trello.dto.response.JwtInfo;
+import com.example.trello.dto.response.TokenPayload;
 import com.example.trello.model.Account;
 import com.example.trello.model.RedisToken;
 import com.example.trello.repository.RedisTokenRepository;
@@ -13,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.text.ParseException;
 import java.time.temporal.ChronoUnit;
@@ -39,20 +42,21 @@ public class JwtServiceImpl implements JwtService {
 
 
     @Override
-    public String generateAccessToken(Account account) {
+    public TokenPayload generateAccessToken(Account account) {
 
 //       HEADER
         JWSHeader header = new JWSHeader(JWSAlgorithm.HS512);
 
         Date issueTime = new Date();
-        Date expiredTime = Date.from(issueTime.toInstant().plus(issuerToken, ChronoUnit.MINUTES));
+        Date expiredTime = Date.from(issueTime.toInstant().plus(issuerToken, ChronoUnit.SECONDS));
+        String jwtId = UUID.randomUUID().toString();
 
 //        PAYLOAD
         JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
                 .subject(account.getEmail())
                 .issueTime(issueTime)
                 .expirationTime(expiredTime)
-                .jwtID(UUID.randomUUID().toString())
+                .jwtID(jwtId)
                 .build();
 
         Payload payload = new Payload(claimsSet.toJSONObject());
@@ -65,7 +69,12 @@ public class JwtServiceImpl implements JwtService {
             throw new RuntimeException(e);
         }
 
-        return jwsObject.serialize();
+        String token = jwsObject.serialize();
+        return TokenPayload.builder()
+                .token(token)
+                .jwtId(jwtId)
+                .expiredTime(expiredTime)
+                .build();
     }
 
     @Override
@@ -74,6 +83,17 @@ public class JwtServiceImpl implements JwtService {
         byte[] randomBytes = new byte[32];
         random.nextBytes(randomBytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
+    }
+
+    @Override
+    public String hashRefreshToken(String refreshToken) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(refreshToken.getBytes());
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
@@ -89,7 +109,7 @@ public class JwtServiceImpl implements JwtService {
 
         String jwtId = signedJWT.getJWTClaimsSet().getJWTID();
 
-        Optional<RedisToken> byId = redisTokenRepository.findById(jwtId);
+        Optional<RedisToken> byId = redisTokenRepository.findByJwtIdAndTokenType(jwtId, TokenType.ACCESS_TOKEN);
 
         if (byId.isPresent()) {
             throw new RuntimeException("JWT invalid");

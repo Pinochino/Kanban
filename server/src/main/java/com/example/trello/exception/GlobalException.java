@@ -3,11 +3,13 @@ package com.example.trello.exception;
 import com.example.trello.constants.ErrorCode;
 import com.example.trello.dto.response.AppResponse;
 import jakarta.validation.ConstraintViolation;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.Map;
 import java.util.Objects;
@@ -15,7 +17,6 @@ import java.util.Objects;
 @RestControllerAdvice
 public class GlobalException {
 
-    private static final String MIN_ATTRIBUTE = "min";
 
     @ExceptionHandler(AppError.class)
     public ResponseEntity<AppResponse<Void>> appError(AppError e) {
@@ -28,7 +29,7 @@ public class GlobalException {
             root = root.getCause();
         }
 
-        return ResponseEntity.status(errorCode.getStatus()).body(new AppResponse<>(errorCode.getCode(), errorCode.getMessage(), root.toString()));
+        return ResponseEntity.status(errorCode.getStatus()).body(new AppResponse<>(errorCode.getCode(), errorCode.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -74,6 +75,11 @@ public class GlobalException {
         }
 
         return message;
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<AppResponse<Void>> noResourceFoundException(NoResourceFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new AppResponse<>(404, e.getMessage()));
     }
 
 
