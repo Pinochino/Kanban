@@ -2,13 +2,14 @@ package com.example.trello.model;
 
 import com.example.trello.constants.RoleName;
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -20,6 +21,7 @@ import java.util.Set;
 @NoArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Builder
+@EntityListeners(AuditingEntityListener.class)
 public class Role extends AbstractEntity implements Serializable {
 
     @Serial
@@ -34,7 +36,9 @@ public class Role extends AbstractEntity implements Serializable {
 
     @ManyToMany(mappedBy = "roles")
     @JsonBackReference
-    Set<User> users = new HashSet<>();
+    Set<Account> accounts = new HashSet<>();
 
-
+    public Role(RoleName name) {
+        this.name = name;
+    }
 }

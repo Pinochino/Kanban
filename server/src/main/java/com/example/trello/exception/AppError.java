@@ -10,10 +10,12 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class AppError extends RuntimeException {
 
+    long timestamp;
     ErrorCode errorCode;
 
     public AppError(ErrorCode errorCode) {
         super(errorCode.getMessage());
+        this.timestamp = System.currentTimeMillis();
         this.errorCode = errorCode;
     }
 

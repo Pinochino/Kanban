@@ -5,6 +5,10 @@ import lombok.*;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -13,13 +17,15 @@ import java.time.LocalDateTime;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Builder
-public class UserResponse {
+public class AccountResponse {
 
     String id;
 
     String username;
 
     String email;
+
+    Set<RoleResponse> roles = new HashSet<>();
 
     LocalDateTime createdAt;
 
