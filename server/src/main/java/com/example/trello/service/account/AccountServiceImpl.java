@@ -1,6 +1,7 @@
 package com.example.trello.service.account;
 
 import com.example.trello.constants.ErrorCode;
+import com.example.trello.dto.request.DataToolRequest;
 import com.example.trello.dto.response.AccountResponse;
 import com.example.trello.exception.AppError;
 import com.example.trello.mapper.AccountMapper;
@@ -10,13 +11,16 @@ import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
-public class AccountServiceImpl extends AccountService {
+public class AccountServiceImpl implements AccountService {
 
     AccountRepository accountRepository;
     AccountMapper accountMapper;
@@ -29,8 +33,12 @@ public class AccountServiceImpl extends AccountService {
     }
 
     @Override
-    public List<AccountResponse> getAccounts() {
-        return accountRepository.findAll().stream().map(accountMapper::toResponse).toList();
+    public List<AccountResponse> getAccounts(DataToolRequest request) {
+
+        Sort sort = request.isAscending() ? Sort.by(request.getSortBy()).ascending() : Sort.by(request.getSortBy()).descending();
+        Pageable pageable = PageRequest.of(request.getPage(), request.getSize(), sort);
+
+        return accountRepository.findAll(pageable).stream().map(accountMapper::toResponse).toList();
     }
 
     @Override
