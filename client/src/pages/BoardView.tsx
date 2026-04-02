@@ -81,7 +81,7 @@ export default function BoardView() {
     const overList = lists.find(l => l.id === over.id);
     const overCard = cards.find(c => c.id === over.id);
 
-    let targetListId = overList?.id || overCard?.list_id;
+    const targetListId = overList?.id || overCard?.list_id;
     if (!targetListId || targetListId === activeCard.list_id) return;
 
     // Move card to new list optimistically

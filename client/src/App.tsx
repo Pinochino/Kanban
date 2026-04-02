@@ -17,37 +17,40 @@ import Moderation from "./pages/admin/Moderation";
 import Analytics from "./pages/admin/Analytics";
 import SystemSettings from "./pages/admin/SystemSettings";
 import NotificationControl from "./pages/admin/NotificationControl";
+import GlobalProvider from "./hooks/providers/GlobalProvider";
 
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/" element={<ProtectedRoute><Boards /></ProtectedRoute>} />
-            <Route path="/board/:id" element={<ProtectedRoute><BoardView /></ProtectedRoute>} />
+  <GlobalProvider>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <Routes>
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/" element={<ProtectedRoute><Boards /></ProtectedRoute>} />
+              <Route path="/board/:id" element={<ProtectedRoute><BoardView /></ProtectedRoute>} />
 
-            <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
-              <Route index element={<AdminDashboard />} />
-              <Route path="users" element={<UserManagement />} />
-              <Route path="boards" element={<BoardManagement />} />
-              <Route path="moderation" element={<Moderation />} />
-              <Route path="analytics" element={<Analytics />} />
-              <Route path="settings" element={<SystemSettings />} />
-              <Route path="notifications" element={<NotificationControl />} />
-            </Route>
+              <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
+                <Route index element={<AdminDashboard />} />
+                <Route path="users" element={<UserManagement />} />
+                <Route path="boards" element={<BoardManagement />} />
+                <Route path="moderation" element={<Moderation />} />
+                <Route path="analytics" element={<Analytics />} />
+                <Route path="settings" element={<SystemSettings />} />
+                <Route path="notifications" element={<NotificationControl />} />
+              </Route>
 
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </GlobalProvider>
 );
 
 export default App;
