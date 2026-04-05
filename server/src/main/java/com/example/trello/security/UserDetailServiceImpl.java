@@ -4,8 +4,6 @@ import com.example.trello.constants.ErrorCode;
 import com.example.trello.exception.AppError;
 import com.example.trello.model.Account;
 import com.example.trello.repository.AccountRepository;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import org.springframework.beans.factory.annotation.Autowired;

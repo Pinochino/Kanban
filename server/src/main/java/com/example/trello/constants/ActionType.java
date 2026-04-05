@@ -1,4 +1,6 @@
 package com.example.trello.constants;
 
-public class ActionType {
+public enum ActionType {
+    DELETE,
+    EDIT,
 }

@@ -1,6 +1,5 @@
 package com.example.trello.config;
 
-import com.example.trello.constants.RoleName;
 import com.example.trello.security.UserDetailServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;

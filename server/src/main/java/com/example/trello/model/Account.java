@@ -1,5 +1,6 @@
 package com.example.trello.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
@@ -8,7 +9,9 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -27,7 +30,7 @@ public class Account extends AbstractEntity implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Long id;
+    Long accountId;
 
     String username;
 
@@ -37,12 +40,30 @@ public class Account extends AbstractEntity implements Serializable {
     String password;
 
     @ManyToMany
-    @JoinTable(name = "user_roles",
-            joinColumns = @JoinColumn(name = "user_id"),
-            inverseJoinColumns = @JoinColumn(name = "role_id"))
+    @JoinTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "role_id"))
     @JsonManagedReference
     @Builder.Default
     Set<Role> roles = new HashSet<>();
+
+    @OneToMany(mappedBy = "account")
+    @JsonBackReference
+    @Builder.Default
+    List<Project> projects = new ArrayList<>();
+
+    @OneToMany(mappedBy = "account")
+    @JsonManagedReference
+    @Builder.Default
+    List<Comment> comments = new ArrayList<>();
+
+    @OneToMany(mappedBy = "account")
+    @JsonManagedReference
+    @Builder.Default
+    List<TaskActivity> taskActivities = new ArrayList<>();
+
+    @OneToMany(mappedBy = "account")
+    @JsonManagedReference
+    @Builder.Default
+    List<ProjectMember> projectMembers = new ArrayList<>();
 
     public void addRole(Role role) {
         this.roles.add(role);

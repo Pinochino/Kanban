@@ -1,19 +1,16 @@
 package com.example.trello.service.jwt;
 
-import com.example.trello.constants.RoleName;
 import com.example.trello.constants.TokenType;
 import com.example.trello.dto.response.JwtInfo;
 import com.example.trello.dto.response.TokenPayload;
 import com.example.trello.model.Account;
 import com.example.trello.model.RedisToken;
-import com.example.trello.model.Role;
 import com.example.trello.repository.RedisTokenRepository;
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.crypto.MACVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
-import jakarta.mail.search.SearchTerm;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;

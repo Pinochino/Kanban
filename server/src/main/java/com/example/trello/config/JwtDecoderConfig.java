@@ -3,7 +3,6 @@ package com.example.trello.config;
 import com.example.trello.constants.ErrorCode;
 import com.example.trello.exception.AppError;
 import com.example.trello.service.jwt.JwtService;
-import com.example.trello.service.jwt.JwtServiceImpl;
 import com.nimbusds.jose.JOSEException;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;

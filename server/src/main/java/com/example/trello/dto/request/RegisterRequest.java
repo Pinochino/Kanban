@@ -1,6 +1,5 @@
 package com.example.trello.dto.request;
 
-import com.example.trello.constants.ErrorCode;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

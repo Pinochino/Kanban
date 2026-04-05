@@ -9,7 +9,6 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.io.Serial;
 import java.io.Serializable;
-import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -25,17 +24,18 @@ import java.util.Set;
 public class Role extends AbstractEntity implements Serializable {
 
     @Serial
-    private static final long serialVersionUID = 1L;
+    static final long serialVersionUID = 1L;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Long id;
+    Long roleId;
 
     @Enumerated(EnumType.STRING)
     RoleName name;
 
     @ManyToMany(mappedBy = "roles")
     @JsonBackReference
+    @Builder.Default
     Set<Account> accounts = new HashSet<>();
 
     public Role(RoleName name) {
