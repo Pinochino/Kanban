@@ -1,4 +1,4 @@
-import { AxiosInterceptorOptions, AxiosRequestConfig } from "axios";
+import { AxiosRequestConfig } from "axios";
 import axiosClient from "./axiosClient";
 
 type apiMethod = "GET" | "POST" | "DELETE" | "PUT" | "PATCH";

@@ -52,12 +52,12 @@ public class AuthServiceImpl implements AuthService {
 
     @Autowired
     public AuthServiceImpl(AccountRepository accountRepository,
-                           RoleRepository roleRepository,
-                           PasswordEncoder passwordEncoder,
-                           AccountMapper accountMapper,
-                           AuthenticationManager authenticationManager,
-                           RedisTokenRepository redisTokenRepository,
-                           JwtService jwtService) {
+            RoleRepository roleRepository,
+            PasswordEncoder passwordEncoder,
+            AccountMapper accountMapper,
+            AuthenticationManager authenticationManager,
+            RedisTokenRepository redisTokenRepository,
+            JwtService jwtService) {
         this.accountRepository = accountRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
@@ -88,7 +88,6 @@ public class AuthServiceImpl implements AuthService {
             return newRole;
         }));
 
-
         Account newAccount = accountMapper.toUser(request);
         newAccount.setPassword(passwordEncoder.encode(request.getPassword()));
         newAccount.addRole(role.get());
@@ -104,8 +103,7 @@ public class AuthServiceImpl implements AuthService {
         Authentication authenticationRequest = UsernamePasswordAuthenticationToken
                 .unauthenticated(
                         request.getEmail(),
-                        request.getPassword()
-                );
+                        request.getPassword());
 
         if (authenticationManager == null) {
             throw new AppError(ErrorCode.INVALID_CREDENTIALS);
@@ -127,14 +125,12 @@ public class AuthServiceImpl implements AuthService {
         TokenPayload accessTokenPayload = jwtService.generateAccessToken(accountLogin);
         String refreshToken = jwtService.generateRefreshToken();
 
-
         redisTokenRepository.save(
                 RedisToken.builder()
                         .tokenType(TokenType.ACCESS_TOKEN)
                         .jwtId(accessTokenPayload.getJwtId())
                         .expiredTime(accessTokenPayload.getExpiredTime().getTime())
-                        .build()
-        );
+                        .build());
 
         redisTokenRepository.save(
                 RedisToken.builder()
@@ -142,9 +138,7 @@ public class AuthServiceImpl implements AuthService {
                         .expiredTime(Date.from(Instant.now().plusSeconds(60 * 60 * 24 * 7)).getTime())
                         .jwtId(jwtService.hashRefreshToken(refreshToken))
                         .userId(accountLogin.getAccountId())
-                        .build()
-        );
-
+                        .build());
 
         return LoginResponse.builder()
                 .accessToken(accessTokenPayload.getToken())
@@ -155,6 +149,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public void logout(String accessToken, String refreshToken) {
+
         JwtInfo jwtInfo = jwtService.parseToken(accessToken);
         String jwtId = jwtInfo.getJwtId();
 
@@ -171,7 +166,6 @@ public class AuthServiceImpl implements AuthService {
                 .tokenType(TokenType.ACCESS_TOKEN)
                 .build();
 
-
         redisTokenRepository.save(redisToken);
 
         String hashRefreshToken = jwtService.hashRefreshToken(refreshToken);
@@ -181,29 +175,32 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public String refreshToken(String refreshToken) {
+        log.info("refresh token: " + refreshToken);
         String hashRefreshToken = jwtService.hashRefreshToken(refreshToken);
         Optional<RedisToken> refreshedToken = redisTokenRepository.findById(hashRefreshToken);
 
+        
         if (refreshedToken.isEmpty()) {
             throw new AppError(ErrorCode.INVALID_CREDENTIALS);
         }
 
         Long userId = refreshedToken.get().getUserId();
-        Account account = accountRepository.findById(userId).orElseThrow(() -> new RuntimeException("Account not found"));
+        Account account = accountRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Account not found"));
 
         TokenPayload accessToken = jwtService.generateAccessToken(account);
 
+        log.info("new AccessToken: ", accessToken.getToken());
         redisTokenRepository.save(
                 RedisToken.builder()
+
                         .tokenType(TokenType.ACCESS_TOKEN)
                         .jwtId(accessToken.getJwtId())
                         .expiredTime(accessToken.getExpiredTime().getTime())
-                        .build()
-        );
+                        .build());
 
         return accessToken.getToken();
 
     }
-
 
 }

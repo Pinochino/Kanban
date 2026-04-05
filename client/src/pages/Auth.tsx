@@ -1,43 +1,82 @@
 import { useState } from "react";
-import { Navigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
+import { Navigate, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Kanban } from "lucide-react";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { RootState } from "@/store/store";
+import authService from "@/services/AuthService";
 
 export default function Auth() {
-  const { user, isLoading } = useAuth();
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
   const [registerName, setRegisterName] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp } = useAuth();
+  const navigate = useNavigate();
 
-  if (isLoading) return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
-  if (user) return <Navigate to="/" replace />;
+  const dispatch = useAppDispatch();
+  const {
+    data: userLogin,
+    error,
+    status,
+  } = useAppSelector((state: RootState) => state.auth.login);
+  const { data: userRegister } = useAppSelector(
+    (state: RootState) => state.auth.register,
+  );
+
+  if (status === "pending")
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  // if (userLogin) return <Navigate to="/" replace />;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await signIn(loginEmail, loginPassword);
-    if (error) toast.error(error.message);
-    else toast.success("Đăng nhập thành công!");
-    setLoading(false);
+    const payload = {
+      email: loginEmail,
+      password: loginPassword,
+    };
+    try {
+      await dispatch(authService.login({ ...payload })).unwrap();
+      navigate("/");
+      toast.success("Đăng nhập thành công!");
+    } catch (err: any) {
+      toast.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await signUp(registerEmail, registerPassword, registerName);
-    if (error) toast.error(error.message);
-    else toast.success("Đăng ký thành công! Kiểm tra email để xác nhận.");
-    setLoading(false);
+    const payload = {
+      email: registerEmail,
+      password: registerPassword,
+    };
+    try {
+      await dispatch(authService.register({ ...payload })).unwrap();
+      toast.success("Đăng kí thành công! Vui lòng đăng nhập.");
+    } catch (err: any) {
+      toast.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -61,11 +100,27 @@ export default function Auth() {
               <form onSubmit={handleLogin} className="space-y-4 mt-4">
                 <div className="space-y-2">
                   <Label htmlFor="login-email">Email</Label>
-                  <Input id="login-email" type="email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} placeholder="you@example.com" required />
+                  <Input
+                    id="login-email"
+                    type="email"
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    required
+                    autoComplete="new-email"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="login-password">Mật khẩu</Label>
-                  <Input id="login-password" type="password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} placeholder="••••••••" required />
+                  <Input
+                    id="login-password"
+                    type="password"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    autoComplete="new-password"
+                  />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "Đang xử lý..." : "Đăng nhập"}
@@ -77,15 +132,38 @@ export default function Auth() {
               <form onSubmit={handleRegister} className="space-y-4 mt-4">
                 <div className="space-y-2">
                   <Label htmlFor="register-name">Họ và tên</Label>
-                  <Input id="register-name" value={registerName} onChange={(e) => setRegisterName(e.target.value)} placeholder="Nguyễn Văn A" required />
+                  <Input
+                    id="register-name"
+                    value={registerName}
+                    onChange={(e) => setRegisterName(e.target.value)}
+                    placeholder="Nguyễn Văn A"
+                    required
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="register-email">Email</Label>
-                  <Input id="register-email" type="email" value={registerEmail} onChange={(e) => setRegisterEmail(e.target.value)} placeholder="you@example.com" required />
+                  <Input
+                    id="register-email"
+                    type="email"
+                    value={registerEmail}
+                    onChange={(e) => setRegisterEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    required
+                    autoComplete="new-email"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="register-password">Mật khẩu</Label>
-                  <Input id="register-password" type="password" value={registerPassword} onChange={(e) => setRegisterPassword(e.target.value)} placeholder="Tối thiểu 6 ký tự" minLength={6} required />
+                  <Input
+                    id="register-password"
+                    type="password"
+                    value={registerPassword}
+                    onChange={(e) => setRegisterPassword(e.target.value)}
+                    placeholder="Tối thiểu 6 ký tự"
+                    minLength={6}
+                    required
+                    autoComplete="new-password"
+                  />
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "Đang xử lý..." : "Đăng ký"}

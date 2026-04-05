@@ -1,7 +1,7 @@
 import { LayoutDashboard, Users, Kanban, Shield, Settings, Bell, LogOut, BarChart3 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
+import { useLocation, useNavigate } from "react-router-dom";
+// import { useAuth } from "@/hooks/useAuth";
 import {
   Sidebar,
   SidebarContent,
@@ -17,6 +17,11 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useAppDispatch } from "@/store/hooks";
+import { useState } from "react";
+import authService from "@/services/AuthService";
+import { toast } from "../ui/sonner";
+import { getAccessToken } from "@/utils/JwtUtils";
 
 const menuItems = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
@@ -32,7 +37,23 @@ export function AdminSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
-  const { profile, signOut } = useAuth();
+  // const { profile, signOut } = useAuth();
+
+  const dispatch = useAppDispatch();
+  const [loading, setLoading] = useState<boolean>(false);
+  const navigate = useNavigate();
+
+  const signOut = async () => {
+    try {
+
+      await dispatch(authService.logout());
+
+      // navigate("/auth");
+
+    } catch (error) {
+      toast.error(error.message)
+    }
+  }
 
   const isActive = (path: string) => {
     if (path === "/admin") return location.pathname === "/admin";
@@ -74,12 +95,12 @@ export function AdminSidebar() {
         <div className="flex items-center gap-2 px-2">
           <Avatar className="h-8 w-8 shrink-0">
             <AvatarFallback className="bg-primary/10 text-primary text-xs">
-              {profile?.full_name?.charAt(0)?.toUpperCase() || "A"}
+              {/* {profile?.full_name?.charAt(0)?.toUpperCase() || "A"} */}
             </AvatarFallback>
           </Avatar>
           {!collapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{profile?.full_name || "Admin"}</p>
+              {/* <p className="text-sm font-medium truncate">{profile?.full_name || "Admin"}</p> */}
               <p className="text-xs text-muted-foreground">Administrator</p>
             </div>
           )}
