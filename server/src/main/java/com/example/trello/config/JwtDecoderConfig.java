@@ -43,7 +43,6 @@ public class JwtDecoderConfig implements JwtDecoder {
     public Jwt decode(String token) throws JwtException {
         log.info("Decoding token: {}", token);
 
-        // ✅ Thêm null check
         if (token == null) {
             throw new JwtException("Token is null");
         }

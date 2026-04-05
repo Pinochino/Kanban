@@ -1,5 +1,6 @@
 package com.example.trello.model;
 
+import com.example.trello.constants.ListTaskStatus;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
@@ -7,6 +8,7 @@ import lombok.experimental.FieldDefaults;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,7 +29,8 @@ public class ListTask extends AbstractEntity implements Serializable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long listTaskId;
 
-    String title;
+    @Enumerated(EnumType.STRING)
+    ListTaskStatus status;
 
     Long orderIndex;
 
@@ -39,4 +42,9 @@ public class ListTask extends AbstractEntity implements Serializable {
     @JsonManagedReference
     @Builder.Default
     List<Task> tasks = new ArrayList<>();
+
+    public ListTask(ListTaskStatus status, Project project) {
+        this.status = status;
+        this.project = project;
+    }
 }

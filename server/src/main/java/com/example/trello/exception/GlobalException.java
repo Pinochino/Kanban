@@ -2,13 +2,16 @@ package com.example.trello.exception;
 
 import com.example.trello.constants.ErrorCode;
 import com.example.trello.dto.response.AppResponse;
+import com.nimbusds.jose.JOSEException;
 import jakarta.validation.ConstraintViolation;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.Map;
@@ -82,5 +85,17 @@ public class GlobalException {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new AppResponse<>(404, e.getMessage()));
     }
 
+    @ExceptionHandler(HttpServerErrorException.InternalServerError.class)
+    public ResponseEntity<AppResponse<Void>> internalServerErrorException(HttpServerErrorException.InternalServerError e) {
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new AppResponse<>(500, e.getMessage()));
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<AppResponse<Void>> httpRequestMethodNotSupportedException(HttpRequestMethodNotSupportedException e) {
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(new AppResponse<>(500, e.getMessage()));
+    }
 
 }
+

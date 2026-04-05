@@ -175,10 +175,10 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public String refreshToken(String refreshToken) {
-        log.info("refresh token: " + refreshToken);
-        String hashRefreshToken = jwtService.hashRefreshToken(refreshToken);
-        Optional<RedisToken> refreshedToken = redisTokenRepository.findById(hashRefreshToken);
 
+        String hashRefreshToken = jwtService.hashRefreshToken(refreshToken);
+
+        Optional<RedisToken> refreshedToken = redisTokenRepository.findById(hashRefreshToken);
         
         if (refreshedToken.isEmpty()) {
             throw new AppError(ErrorCode.INVALID_CREDENTIALS);
@@ -190,7 +190,6 @@ public class AuthServiceImpl implements AuthService {
 
         TokenPayload accessToken = jwtService.generateAccessToken(account);
 
-        log.info("new AccessToken: ", accessToken.getToken());
         redisTokenRepository.save(
                 RedisToken.builder()
 

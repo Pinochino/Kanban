@@ -36,7 +36,8 @@ public class Task extends AbstractEntity implements Serializable {
 
     Long orderIndex;
 
-    boolean isActive;
+    @Builder.Default
+    boolean isActive = true;
 
     LocalDateTime dueDate;
 

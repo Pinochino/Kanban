@@ -1,6 +1,7 @@
 package com.example.trello.model;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -31,9 +32,12 @@ public class Project extends AbstractEntity implements Serializable {
 
     String description;
 
+    @JsonProperty("isPublic")
     boolean isPublic;
 
-    boolean isDeleted;
+    @JsonProperty("isDeleted")
+    @Builder.Default
+    boolean isDeleted = false;
 
     @ManyToOne()
     @JoinColumn(name = "account_id")

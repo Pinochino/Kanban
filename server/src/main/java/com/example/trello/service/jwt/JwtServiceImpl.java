@@ -1,8 +1,10 @@
 package com.example.trello.service.jwt;
 
+import com.example.trello.constants.ErrorCode;
 import com.example.trello.constants.TokenType;
 import com.example.trello.dto.response.JwtInfo;
 import com.example.trello.dto.response.TokenPayload;
+import com.example.trello.exception.AppError;
 import com.example.trello.model.Account;
 import com.example.trello.model.RedisToken;
 import com.example.trello.repository.RedisTokenRepository;
@@ -102,25 +104,41 @@ public class JwtServiceImpl implements JwtService {
     }
 
     @Override
-    public boolean verifyToken(String token) throws ParseException, JOSEException {
+    public boolean verifyToken(String token) {
 
-        SignedJWT signedJWT = SignedJWT.parse(token);
+        SignedJWT signedJWT = null;
 
-        Date expirationTime = signedJWT.getJWTClaimsSet().getExpirationTime();
+        try {
+            signedJWT = SignedJWT.parse(token);
 
-        if (expirationTime.before(new Date())) {
-            return false;
+            // Verify signature
+            boolean validSignature = signedJWT.verify(new MACVerifier(secretKey));
+            if (!validSignature) {
+                throw new AppError(ErrorCode.INVALID_JWT_SIGNATURE);
+            }
+
+            // Check expiration
+            Date expirationTime = signedJWT.getJWTClaimsSet().getExpirationTime();
+
+            if (expirationTime == null || expirationTime.before(new Date())) {
+                throw new AppError(ErrorCode.TOKEN_HAS_EXPIRED);
+            }
+
+            // Check blacklist (Redis)
+            String jwtId = signedJWT.getJWTClaimsSet().getJWTID();
+            Optional<RedisToken> byId = redisTokenRepository.findByJwtIdAndTokenType(jwtId, TokenType.ACCESS_TOKEN);
+
+            if (byId.isPresent()) {
+                throw new AppError(ErrorCode.JWT_INVALID);
+            }
+
+            return true;
+        } catch (ParseException e) {
+            throw new AppError(ErrorCode.INVALID_TOKEN_FORMAT);
+        } catch (JOSEException e) {
+            throw new AppError(ErrorCode.TOKEN_VERIFICATION_FAILED);
         }
 
-        String jwtId = signedJWT.getJWTClaimsSet().getJWTID();
-
-        Optional<RedisToken> byId = redisTokenRepository.findByJwtIdAndTokenType(jwtId, TokenType.ACCESS_TOKEN);
-
-        if (byId.isPresent()) {
-            throw new RuntimeException("JWT invalid");
-        }
-
-        return signedJWT.verify(new MACVerifier(secretKey));
     }
 
     @Override
