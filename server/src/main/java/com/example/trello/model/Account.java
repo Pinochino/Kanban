@@ -30,7 +30,7 @@ public class Account extends AbstractEntity implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Long accountId;
+    Long id;
 
     String username;
 

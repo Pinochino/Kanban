@@ -137,7 +137,7 @@ public class AuthServiceImpl implements AuthService {
                         .tokenType(TokenType.REFRESH_TOKEN)
                         .expiredTime(Date.from(Instant.now().plusSeconds(60 * 60 * 24 * 7)).getTime())
                         .jwtId(jwtService.hashRefreshToken(refreshToken))
-                        .userId(accountLogin.getAccountId())
+                        .userId(accountLogin.getId())
                         .build());
 
         return LoginResponse.builder()

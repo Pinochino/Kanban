@@ -1,5 +1,6 @@
 package com.example.trello.dto.request;
 
+import com.example.trello.model.Account;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
@@ -15,5 +16,6 @@ public class ProjectRequest {
     String description;
 
     boolean isPublic;
+
 
 }

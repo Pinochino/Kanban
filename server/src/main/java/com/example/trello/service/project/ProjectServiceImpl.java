@@ -2,7 +2,6 @@ package com.example.trello.service.project;
 
 import com.example.trello.constants.ErrorCode;
 import com.example.trello.constants.ListTaskStatus;
-import com.example.trello.constants.RoleName;
 import com.example.trello.dto.request.ProjectRequest;
 import com.example.trello.dto.response.ProjectResponse;
 import com.example.trello.exception.AppError;
@@ -13,12 +12,10 @@ import com.example.trello.model.Project;
 import com.example.trello.repository.AccountRepository;
 import com.example.trello.repository.ListTaskRepository;
 import com.example.trello.repository.ProjectRepository;
-import com.example.trello.security.CustomUserDetail;
+import com.example.trello.utils.JwtUtil;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -32,16 +29,19 @@ public class ProjectServiceImpl implements ProjectService {
     AccountRepository accountRepository;
     ListTaskRepository listTaskRepository;
     ProjectMapper projectMapper;
+    JwtUtil jwtUtil;
 
     @Autowired
     public ProjectServiceImpl(ProjectRepository projectRepository,
                               AccountRepository accountRepository,
                               ListTaskRepository listTaskRepository,
-                              ProjectMapper projectMapper) {
+                              ProjectMapper projectMapper,
+                              JwtUtil jwtUtil) {
         this.projectRepository = projectRepository;
         this.accountRepository = accountRepository;
         this.listTaskRepository = listTaskRepository;
         this.projectMapper = projectMapper;
+        this.jwtUtil = jwtUtil;
     }
 
     @Override
@@ -66,8 +66,10 @@ public class ProjectServiceImpl implements ProjectService {
 
         Project newProject = projectMapper.toProject(projectRequest);
 
-        Account account = checkAdminRole();
+//        Account account = checkAdminRole();
 
+
+        Account account = jwtUtil.getCurrentUserLogin();
 
         newProject.setAccount(account);
 
@@ -88,43 +90,24 @@ public class ProjectServiceImpl implements ProjectService {
         return projectMapper.toResponse(newProject);
     }
 
-    private Account checkAdminRole() {
-        Jwt jwt = (Jwt) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        String email = jwt.getClaim("sub");
-
-        Account account = accountRepository.findAccountByEmail(email).orElseThrow(() ->
-                new AppError(ErrorCode.USER_NOT_FOUND));
-
-        boolean checkRoleAdmin = account.getRoles().stream().anyMatch(role ->
-                role.getName().equals(RoleName.SUPER_ADMIN));
-
-        if (!checkRoleAdmin) {
-            throw new AppError(ErrorCode.PROJECT_AUTHORIZED);
-        }
-
-        return account;
-    }
 
     @Transactional
     @Override
-    public void deleteProject(Long id) {
-        Project project = projectRepository.findById(id).orElseThrow(() -> new AppError(ErrorCode.PROJECT_NOT_FOUND));
-        Account account = checkAdminRole();
+    public void deleteProject(Long projectId) {
+        Account account = jwtUtil.getCurrentUserLogin();
+        Project project = projectRepository.findById(projectId).orElseThrow(() -> new AppError(ErrorCode.PROJECT_NOT_FOUND));
 
-        if (account != null) {
-            projectRepository.delete(project);
-            account.getProjects().remove(project);
-        }
+        projectRepository.delete(project);
+        account.getProjects().remove(project);
     }
 
     @Transactional
     @Override
     public void deleteAllProjects() {
-        Account account = checkAdminRole();
-        if (account != null) {
-            projectRepository.deleteAll();
-            account.getProjects().clear();
-        }
+        Account account = jwtUtil.getCurrentUserLogin();
+        projectRepository.deleteAll();
+        account.getProjects().clear();
+//        }
     }
 
 }

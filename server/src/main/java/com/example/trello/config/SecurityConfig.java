@@ -1,5 +1,6 @@
 package com.example.trello.config;
 
+import com.example.trello.constants.RoleName;
 import com.example.trello.security.UserDetailServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -27,9 +28,14 @@ import java.util.stream.Collectors;
 public class SecurityConfig {
 
     private final CustomAuthenticationEntryPoint authenticationEntryPoint;
+
     private static final String[] WHITE_LIST = {
             "/auth/**",
     };
+    private static final String[] ADMIN_LIST = {
+            "/projects/**", "/accounts/**",
+    };
+
     private final CustomAccessDeniedHandler accessDeniedHandler;
     private final JwtDecoderConfig jwtDecoderConfig;
 
@@ -46,9 +52,9 @@ public class SecurityConfig {
     public SecurityFilterChain configure(HttpSecurity http) throws Exception {
         return http
                 .authorizeHttpRequests(auth -> auth
-//                        .requestMatchers(WHITE_LIST).permitAll()
-//                        .requestMatchers("/accounts/**").hasRole(RoleName.SUPER_ADMIN.name())
-                                .anyRequest().permitAll()
+                        .requestMatchers(ADMIN_LIST).hasRole(RoleName.SUPER_ADMIN.name())
+                        .requestMatchers(WHITE_LIST).permitAll()
+                        .anyRequest().authenticated()
                 )
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
