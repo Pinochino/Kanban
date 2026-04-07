@@ -1,10 +1,12 @@
 package com.example.trello.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -20,6 +22,7 @@ import java.util.List;
 @NoArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Builder
+@EntityListeners(AuditingEntityListener.class)
 public class Task extends AbstractEntity implements Serializable {
 
 
@@ -30,6 +33,7 @@ public class Task extends AbstractEntity implements Serializable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long taskId;
 
+    @Column(unique = true)
     String title;
 
     String description;
@@ -39,8 +43,10 @@ public class Task extends AbstractEntity implements Serializable {
     @Builder.Default
     boolean isActive = true;
 
+    @JsonFormat(pattern = "yyyy-MM-dd")
     LocalDateTime dueDate;
 
+    @JsonFormat(pattern = "yyyy-MM-dd")
     LocalDateTime reminderDate;
 
     @ManyToOne
@@ -65,5 +71,9 @@ public class Task extends AbstractEntity implements Serializable {
     @Builder.Default
     List<TaskActivity> taskActivities = new ArrayList<>();
 
+    @ManyToOne
+    @JoinColumn(name = "signed_account_id")
+    @JsonBackReference
+    Account assignedAccount;
 
 }

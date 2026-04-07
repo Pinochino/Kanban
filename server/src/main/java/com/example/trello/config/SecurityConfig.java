@@ -2,6 +2,8 @@ package com.example.trello.config;
 
 import com.example.trello.constants.RoleName;
 import com.example.trello.security.UserDetailServiceImpl;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,19 +27,22 @@ import java.util.stream.Collectors;
 
 @Configuration
 @EnableWebSecurity
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class SecurityConfig {
 
-    private final CustomAuthenticationEntryPoint authenticationEntryPoint;
+    CustomAuthenticationEntryPoint authenticationEntryPoint;
 
-    private static final String[] WHITE_LIST = {
+    String[] WHITE_LIST = {
             "/auth/**",
     };
-    private static final String[] ADMIN_LIST = {
-            "/projects/**", "/accounts/**",
+    String[] ADMIN_LIST = {
+            "/projects/**",
+            "/accounts/**",
+            "/tasks/**",
     };
 
-    private final CustomAccessDeniedHandler accessDeniedHandler;
-    private final JwtDecoderConfig jwtDecoderConfig;
+    CustomAccessDeniedHandler accessDeniedHandler;
+    JwtDecoderConfig jwtDecoderConfig;
 
     @Autowired
     public SecurityConfig(CustomAuthenticationEntryPoint authenticationEntryPoint,

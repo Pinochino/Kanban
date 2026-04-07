@@ -1,5 +1,6 @@
 package com.example.trello.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
@@ -23,8 +24,16 @@ public class TaskResponse {
 
     boolean isActive;
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     LocalDateTime dueDate;
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     LocalDateTime reminderDate;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    LocalDateTime createdAt;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    LocalDateTime updatedAt;
 
 }

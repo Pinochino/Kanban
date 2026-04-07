@@ -9,6 +9,7 @@ import com.example.trello.model.Account;
 import com.example.trello.repository.AccountRepository;
 import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
@@ -20,17 +21,12 @@ import java.util.List;
 
 @Service
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+@RequiredArgsConstructor
 public class AccountServiceImpl implements AccountService {
 
     AccountRepository accountRepository;
     AccountMapper accountMapper;
 
-    @Autowired
-    public AccountServiceImpl(AccountRepository accountRepository,
-                              AccountMapper accountMapper) {
-        this.accountRepository = accountRepository;
-        this.accountMapper = accountMapper;
-    }
 
     @Override
     public List<AccountResponse> getAccounts(DataToolRequest request) {

@@ -14,8 +14,10 @@ import com.example.trello.repository.ListTaskRepository;
 import com.example.trello.repository.ProjectRepository;
 import com.example.trello.utils.JwtUtil;
 import jakarta.transaction.Transactional;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,6 +25,8 @@ import java.util.Optional;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PACKAGE, makeFinal = true)
 public class ProjectServiceImpl implements ProjectService {
 
     ProjectRepository projectRepository;
@@ -31,22 +35,9 @@ public class ProjectServiceImpl implements ProjectService {
     ProjectMapper projectMapper;
     JwtUtil jwtUtil;
 
-    @Autowired
-    public ProjectServiceImpl(ProjectRepository projectRepository,
-                              AccountRepository accountRepository,
-                              ListTaskRepository listTaskRepository,
-                              ProjectMapper projectMapper,
-                              JwtUtil jwtUtil) {
-        this.projectRepository = projectRepository;
-        this.accountRepository = accountRepository;
-        this.listTaskRepository = listTaskRepository;
-        this.projectMapper = projectMapper;
-        this.jwtUtil = jwtUtil;
-    }
-
     @Override
     public List<ProjectResponse> getProjects() {
-        return projectRepository.findAll().stream().map(project -> projectMapper.toResponse(project)).toList();
+        return projectRepository.findAll().stream().map(projectMapper::toResponse).toList();
     }
 
     @Override
@@ -65,8 +56,6 @@ public class ProjectServiceImpl implements ProjectService {
         }
 
         Project newProject = projectMapper.toProject(projectRequest);
-
-//        Account account = checkAdminRole();
 
 
         Account account = jwtUtil.getCurrentUserLogin();

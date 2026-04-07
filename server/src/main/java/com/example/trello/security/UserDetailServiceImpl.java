@@ -31,6 +31,9 @@ public class UserDetailServiceImpl implements UserDetailsService {
         Account oldAccount = accountRepository.findUserByEmail(username)
                 .orElseThrow(() -> new AppError(ErrorCode.INVALID_CREDENTIALS));
 
+        oldAccount.setLogin(true);
+        accountRepository.save(oldAccount);
+
         return new CustomUserDetail(oldAccount);
     }
 }

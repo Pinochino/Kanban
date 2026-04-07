@@ -1,5 +1,6 @@
 package com.example.trello.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
@@ -22,4 +23,9 @@ public class TaskRequest {
     LocalDateTime dueDate;
 
     LocalDateTime reminderDate;
+
+    Long assignedAccountId;
+
+    Long listTaskId;
+
 }

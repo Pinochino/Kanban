@@ -151,6 +151,7 @@ public class JwtServiceImpl implements JwtService {
             Date issueTime = signedJWT.getJWTClaimsSet().getIssueTime();
             Date expiredTime = signedJWT.getJWTClaimsSet().getExpirationTime();
 
+
             return JwtInfo.builder()
                     .jwtId(jwtId)
                     .issueTime(issueTime)

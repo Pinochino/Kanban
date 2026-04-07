@@ -2,6 +2,8 @@ package com.example.trello.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -39,6 +41,10 @@ public class Account extends AbstractEntity implements Serializable {
 
     String password;
 
+    @Builder.Default
+    @JsonProperty("is_login")
+    boolean isLogin = Boolean.FALSE;
+
     @ManyToMany
     @JoinTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "role_id"))
     @JsonManagedReference
@@ -64,6 +70,11 @@ public class Account extends AbstractEntity implements Serializable {
     @JsonManagedReference
     @Builder.Default
     List<ProjectMember> projectMembers = new ArrayList<>();
+
+    @OneToMany(mappedBy = "assignedAccount")
+    @JsonManagedReference
+    @Builder.Default
+    List<Task> tasks = new ArrayList<>();
 
     public void addRole(Role role) {
         this.roles.add(role);

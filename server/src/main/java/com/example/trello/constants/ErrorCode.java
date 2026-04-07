@@ -36,6 +36,14 @@ public enum ErrorCode {
     PROJECT_ALREADY_EXIST(114, "Project already exist", HttpStatus.CONFLICT),
     PROJECT_AUTHORIZED(115, "You don't have a right to create project", HttpStatus.UNAUTHORIZED),
 
+    // TASK
+    TASK_NOT_FOUND(116, "Task Not Found", HttpStatus.NOT_FOUND),
+    TASK_ALREADY_EXIST(117, "Task already exist", HttpStatus.CONFLICT),
+
+
+//    LIST_TASK
+    LIST_TASK_NOT_FOUND(118, "List Task Not Found", HttpStatus.NOT_FOUND),
+
 
     ;
 

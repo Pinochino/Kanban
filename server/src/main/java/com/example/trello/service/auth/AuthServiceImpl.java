@@ -21,6 +21,7 @@ import com.example.trello.security.CustomUserDetail;
 import com.example.trello.service.jwt.JwtService;
 import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,8 +39,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
-@FieldDefaults(level = AccessLevel.PACKAGE, makeFinal = true)
 @Slf4j
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PACKAGE, makeFinal = true)
 public class AuthServiceImpl implements AuthService {
 
     AccountRepository accountRepository;
@@ -50,22 +52,7 @@ public class AuthServiceImpl implements AuthService {
     JwtService jwtService;
     RedisTokenRepository redisTokenRepository;
 
-    @Autowired
-    public AuthServiceImpl(AccountRepository accountRepository,
-            RoleRepository roleRepository,
-            PasswordEncoder passwordEncoder,
-            AccountMapper accountMapper,
-            AuthenticationManager authenticationManager,
-            RedisTokenRepository redisTokenRepository,
-            JwtService jwtService) {
-        this.accountRepository = accountRepository;
-        this.roleRepository = roleRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.accountMapper = accountMapper;
-        this.authenticationManager = authenticationManager;
-        this.jwtService = jwtService;
-        this.redisTokenRepository = redisTokenRepository;
-    }
+
 
     @Override
     public Account findUserByEmail(String email) {
@@ -121,6 +108,7 @@ public class AuthServiceImpl implements AuthService {
             throw new AppError(ErrorCode.INVALID_CREDENTIALS);
         }
 
+
         AccountResponse accountResponse = accountMapper.toResponse(accountLogin);
         TokenPayload accessTokenPayload = jwtService.generateAccessToken(accountLogin);
         String refreshToken = jwtService.generateRefreshToken();
@@ -140,6 +128,7 @@ public class AuthServiceImpl implements AuthService {
                         .userId(accountLogin.getId())
                         .build());
 
+
         return LoginResponse.builder()
                 .accessToken(accessTokenPayload.getToken())
                 .refreshToken(refreshToken)
@@ -153,6 +142,7 @@ public class AuthServiceImpl implements AuthService {
         JwtInfo jwtInfo = jwtService.parseToken(accessToken);
         String jwtId = jwtInfo.getJwtId();
 
+
         Date issueTime = jwtInfo.getIssueTime();
         Date expiredTime = jwtInfo.getExpiredTime();
 
@@ -160,6 +150,7 @@ public class AuthServiceImpl implements AuthService {
             return;
         }
 
+        // Black List Access Token
         RedisToken redisToken = RedisToken.builder()
                 .jwtId(jwtId)
                 .expiredTime(expiredTime.getTime() - issueTime.getTime())
@@ -168,9 +159,17 @@ public class AuthServiceImpl implements AuthService {
 
         redisTokenRepository.save(redisToken);
 
+        // Refresh token
         String hashRefreshToken = jwtService.hashRefreshToken(refreshToken);
+        RedisToken oldRefreshToken = redisTokenRepository.findById(hashRefreshToken).orElseThrow(() ->
+                new AppError(ErrorCode.USER_NOT_FOUND));
+
+        Account account = accountRepository.findById(oldRefreshToken.getUserId()).orElseThrow(() -> new AppError(ErrorCode.USER_NOT_FOUND));
+        account.setLogin(false);
+        accountRepository.save(account);
 
         redisTokenRepository.deleteById(hashRefreshToken);
+
     }
 
     @Override
@@ -179,7 +178,7 @@ public class AuthServiceImpl implements AuthService {
         String hashRefreshToken = jwtService.hashRefreshToken(refreshToken);
 
         Optional<RedisToken> refreshedToken = redisTokenRepository.findById(hashRefreshToken);
-        
+
         if (refreshedToken.isEmpty()) {
             throw new AppError(ErrorCode.INVALID_CREDENTIALS);
         }
