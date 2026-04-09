@@ -24,13 +24,11 @@ import { toast } from "../ui/sonner";
 import { getAccessToken } from "@/utils/JwtUtils";
 
 const menuItems = [
-  { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
-  { title: "Người dùng", url: "/admin/users", icon: Users },
-  { title: "Boards", url: "/admin/boards", icon: Kanban },
-  { title: "Kiểm duyệt", url: "/admin/moderation", icon: Shield },
-  { title: "Analytics", url: "/admin/analytics", icon: BarChart3 },
-  { title: "Cài đặt hệ thống", url: "/admin/settings", icon: Settings },
-  { title: "Thông báo", url: "/admin/notifications", icon: Bell },
+  { title: "Dashboard", url: "/", icon: LayoutDashboard },
+  { title: "Người dùng", url: "/users", icon: Users },
+  { title: "Projects", url: "/projects", icon: Kanban },
+  { title: "Kiểm duyệt", url: "/moderation", icon: Shield },
+  { title: "Thông báo", url: "/notifications", icon: Bell },
 ];
 
 export function AdminSidebar() {
@@ -56,7 +54,7 @@ export function AdminSidebar() {
   }
 
   const isActive = (path: string) => {
-    if (path === "/admin") return location.pathname === "/admin";
+    if (path === "/") return location.pathname === "/";
     return location.pathname.startsWith(path);
   };
 

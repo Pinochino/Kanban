@@ -11,13 +11,11 @@ import NotFound from "./pages/NotFound";
 import AdminLayout from "./layouts/AdminLayout";
 import AdminDashboard from "./pages/admin/Dashboard";
 import UserManagement from "./pages/admin/UserManagement";
-import BoardManagement from "./pages/admin/BoardManagement";
 import Moderation from "./pages/admin/Moderation";
-import Analytics from "./pages/admin/Analytics";
-import SystemSettings from "./pages/admin/SystemSettings";
 import NotificationControl from "./pages/admin/NotificationControl";
 import GlobalProvider from "./hooks/providers/GlobalProvider";
 import { AuthProvider } from "./hooks/providers/AuthProvider";
+import ProjectManagement from "./pages/admin/ProjectManagement";
 
 const queryClient = new QueryClient();
 
@@ -36,24 +34,32 @@ const App = () => (
             <Route
               path="/*"
               element={
-                <AuthProvider>
-                  <Routes>
-                    <Route path="/" element={<ProtectedRoute><Boards /></ProtectedRoute>} />
-                    <Route path="/board/:id" element={<ProtectedRoute><BoardView /></ProtectedRoute>} />
+                // <AuthProvider>
+                <Routes>
+                  {/* <Route path="/" element={
+                    // <ProtectedRoute>
+                    <Boards />
+                    // </ProtectedRoute>
+                  }
+                  />
+                  <Route path="/board/:id" element={<ProtectedRoute><BoardView /></ProtectedRoute>} /> */}
 
-                    <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
-                      <Route index element={<AdminDashboard />} />
-                      <Route path="users" element={<UserManagement />} />
-                      <Route path="boards" element={<BoardManagement />} />
-                      <Route path="moderation" element={<Moderation />} />
-                      <Route path="analytics" element={<Analytics />} />
-                      <Route path="settings" element={<SystemSettings />} />
-                      <Route path="notifications" element={<NotificationControl />} />
-                    </Route>
+                  <Route path="/" element={
+                    // <AdminRoute>
+                    <AdminLayout />
+                    // </AdminRoute>
+                  }
+                  >
+                    <Route index element={<AdminDashboard />} />
+                    <Route path="users" element={<UserManagement />} />
+                    <Route path="projects" element={<ProjectManagement />} />
+                    <Route path="moderation" element={<Moderation />} />
+                    <Route path="notifications" element={<NotificationControl />} />
+                  </Route>
 
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </AuthProvider>
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+                // </AuthProvider>
               }
             />
           </Routes>
