@@ -3,7 +3,6 @@ package com.example.trello.config;
 import com.example.trello.constants.ErrorCode;
 import com.example.trello.exception.AppError;
 import com.example.trello.service.jwt.JwtService;
-import com.example.trello.service.jwt.JwtServiceImpl;
 import com.nimbusds.jose.JOSEException;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
@@ -44,7 +43,6 @@ public class JwtDecoderConfig implements JwtDecoder {
     public Jwt decode(String token) throws JwtException {
         log.info("Decoding token: {}", token);
 
-        // ✅ Thêm null check
         if (token == null) {
             throw new JwtException("Token is null");
         }

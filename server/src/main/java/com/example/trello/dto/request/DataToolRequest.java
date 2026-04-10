@@ -11,11 +11,15 @@ import lombok.experimental.FieldDefaults;
 @Builder
 public class DataToolRequest {
 
+    @Builder.Default
     int page = 0;
+    @Builder.Default
 
     int size = 5;
+    @Builder.Default
 
     String sortBy = "id";
+    @Builder.Default
 
     boolean ascending = true;
 }

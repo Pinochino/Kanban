@@ -21,6 +21,7 @@ import com.example.trello.security.CustomUserDetail;
 import com.example.trello.service.jwt.JwtService;
 import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,8 +39,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
-@FieldDefaults(level = AccessLevel.PACKAGE, makeFinal = true)
 @Slf4j
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PACKAGE, makeFinal = true)
 public class AuthServiceImpl implements AuthService {
 
     AccountRepository accountRepository;
@@ -50,22 +52,7 @@ public class AuthServiceImpl implements AuthService {
     JwtService jwtService;
     RedisTokenRepository redisTokenRepository;
 
-    @Autowired
-    public AuthServiceImpl(AccountRepository accountRepository,
-                           RoleRepository roleRepository,
-                           PasswordEncoder passwordEncoder,
-                           AccountMapper accountMapper,
-                           AuthenticationManager authenticationManager,
-                           RedisTokenRepository redisTokenRepository,
-                           JwtService jwtService) {
-        this.accountRepository = accountRepository;
-        this.roleRepository = roleRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.accountMapper = accountMapper;
-        this.authenticationManager = authenticationManager;
-        this.jwtService = jwtService;
-        this.redisTokenRepository = redisTokenRepository;
-    }
+
 
     @Override
     public Account findUserByEmail(String email) {
@@ -88,7 +75,6 @@ public class AuthServiceImpl implements AuthService {
             return newRole;
         }));
 
-
         Account newAccount = accountMapper.toUser(request);
         newAccount.setPassword(passwordEncoder.encode(request.getPassword()));
         newAccount.addRole(role.get());
@@ -104,8 +90,7 @@ public class AuthServiceImpl implements AuthService {
         Authentication authenticationRequest = UsernamePasswordAuthenticationToken
                 .unauthenticated(
                         request.getEmail(),
-                        request.getPassword()
-                );
+                        request.getPassword());
 
         if (authenticationManager == null) {
             throw new AppError(ErrorCode.INVALID_CREDENTIALS);
@@ -123,18 +108,17 @@ public class AuthServiceImpl implements AuthService {
             throw new AppError(ErrorCode.INVALID_CREDENTIALS);
         }
 
+
         AccountResponse accountResponse = accountMapper.toResponse(accountLogin);
         TokenPayload accessTokenPayload = jwtService.generateAccessToken(accountLogin);
         String refreshToken = jwtService.generateRefreshToken();
-
 
         redisTokenRepository.save(
                 RedisToken.builder()
                         .tokenType(TokenType.ACCESS_TOKEN)
                         .jwtId(accessTokenPayload.getJwtId())
                         .expiredTime(accessTokenPayload.getExpiredTime().getTime())
-                        .build()
-        );
+                        .build());
 
         redisTokenRepository.save(
                 RedisToken.builder()
@@ -142,8 +126,7 @@ public class AuthServiceImpl implements AuthService {
                         .expiredTime(Date.from(Instant.now().plusSeconds(60 * 60 * 24 * 7)).getTime())
                         .jwtId(jwtService.hashRefreshToken(refreshToken))
                         .userId(accountLogin.getId())
-                        .build()
-        );
+                        .build());
 
 
         return LoginResponse.builder()
@@ -155,8 +138,10 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public void logout(String accessToken, String refreshToken) {
+
         JwtInfo jwtInfo = jwtService.parseToken(accessToken);
         String jwtId = jwtInfo.getJwtId();
+
 
         Date issueTime = jwtInfo.getIssueTime();
         Date expiredTime = jwtInfo.getExpiredTime();
@@ -165,23 +150,33 @@ public class AuthServiceImpl implements AuthService {
             return;
         }
 
+        // Black List Access Token
         RedisToken redisToken = RedisToken.builder()
                 .jwtId(jwtId)
                 .expiredTime(expiredTime.getTime() - issueTime.getTime())
                 .tokenType(TokenType.ACCESS_TOKEN)
                 .build();
 
-
         redisTokenRepository.save(redisToken);
 
+        // Refresh token
         String hashRefreshToken = jwtService.hashRefreshToken(refreshToken);
+        RedisToken oldRefreshToken = redisTokenRepository.findById(hashRefreshToken).orElseThrow(() ->
+                new AppError(ErrorCode.USER_NOT_FOUND));
+
+        Account account = accountRepository.findById(oldRefreshToken.getUserId()).orElseThrow(() -> new AppError(ErrorCode.USER_NOT_FOUND));
+        account.setLogin(false);
+        accountRepository.save(account);
 
         redisTokenRepository.deleteById(hashRefreshToken);
+
     }
 
     @Override
     public String refreshToken(String refreshToken) {
+
         String hashRefreshToken = jwtService.hashRefreshToken(refreshToken);
+
         Optional<RedisToken> refreshedToken = redisTokenRepository.findById(hashRefreshToken);
 
         if (refreshedToken.isEmpty()) {
@@ -189,21 +184,21 @@ public class AuthServiceImpl implements AuthService {
         }
 
         Long userId = refreshedToken.get().getUserId();
-        Account account = accountRepository.findById(userId).orElseThrow(() -> new RuntimeException("Account not found"));
+        Account account = accountRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Account not found"));
 
         TokenPayload accessToken = jwtService.generateAccessToken(account);
 
         redisTokenRepository.save(
                 RedisToken.builder()
+
                         .tokenType(TokenType.ACCESS_TOKEN)
                         .jwtId(accessToken.getJwtId())
                         .expiredTime(accessToken.getExpiredTime().getTime())
-                        .build()
-        );
+                        .build());
 
         return accessToken.getToken();
 
     }
-
 
 }

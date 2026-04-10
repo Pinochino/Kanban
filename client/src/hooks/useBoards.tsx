@@ -1,12 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "./useAuth";
+import { useAppSelector } from "@/store/hooks";
+import { RootState } from "@/store/store";
 
 export function useBoards() {
-  const { user } = useAuth();
+  const { data: userLogin } = useAppSelector((state: RootState) => state.auth.login);
+  const { data: userRegister } = useAppSelector((state: RootState) => state.auth.register);
 
   return useQuery({
-    queryKey: ["boards", user?.id],
+    queryKey: ["boards", userLogin?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("boards")
@@ -16,26 +18,27 @@ export function useBoards() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user,
+    enabled: !!userLogin,
   });
 }
 
 export function useCreateBoard() {
   const qc = useQueryClient();
-  const { user } = useAuth();
+  const { data: userLogin } = useAppSelector((state: RootState) => state.auth.login);
+  const { data: userRegister } = useAppSelector((state: RootState) => state.auth.register);
 
-  return useMutation({
-    mutationFn: async ({ title, description, background_color }: { title: string; description?: string; background_color?: string }) => {
-      const { data, error } = await supabase
-        .from("boards")
-        .insert({ title, description, background_color: background_color || "#1e40af", owner_id: user!.id })
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["boards"] }),
-  });
+  // return useMutation({
+  //   mutationFn: async ({ title, description, background_color }: { title: string; description?: string; background_color?: string }) => {
+  //     const { data, error } = await supabase
+  //       .from("boards")
+  //       .insert({ title, description, background_color: background_color || "#1e40af", owner_id: user!.id })
+  //       .select()
+  //       .single();
+  //     if (error) throw error;
+  //     return data;
+  //   },
+  //   onSuccess: () => qc.invalidateQueries({ queryKey: ["boards"] }),
+  // });
 }
 
 export function useBoardDetail(boardId: string | undefined) {

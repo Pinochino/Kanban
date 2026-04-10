@@ -2,6 +2,8 @@ package com.example.trello.config;
 
 import com.example.trello.constants.RoleName;
 import com.example.trello.security.UserDetailServiceImpl;
+import lombok.AccessLevel;
+import lombok.experimental.FieldDefaults;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,14 +27,22 @@ import java.util.stream.Collectors;
 
 @Configuration
 @EnableWebSecurity
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class SecurityConfig {
 
-    private final CustomAuthenticationEntryPoint authenticationEntryPoint;
-    private static final String[] WHITE_LIST = {
+    CustomAuthenticationEntryPoint authenticationEntryPoint;
+
+    String[] WHITE_LIST = {
             "/auth/**",
     };
-    private final CustomAccessDeniedHandler accessDeniedHandler;
-    private final JwtDecoderConfig jwtDecoderConfig;
+    String[] ADMIN_LIST = {
+            "/projects/**",
+            "/accounts/**",
+            "/tasks/**",
+    };
+
+    CustomAccessDeniedHandler accessDeniedHandler;
+    JwtDecoderConfig jwtDecoderConfig;
 
     @Autowired
     public SecurityConfig(CustomAuthenticationEntryPoint authenticationEntryPoint,
@@ -47,9 +57,9 @@ public class SecurityConfig {
     public SecurityFilterChain configure(HttpSecurity http) throws Exception {
         return http
                 .authorizeHttpRequests(auth -> auth
-//                        .requestMatchers(WHITE_LIST).permitAll()
-//                        .requestMatchers("/accounts/**").hasRole(RoleName.SUPER_ADMIN.name())
-                                .anyRequest().permitAll()
+                        .requestMatchers(ADMIN_LIST).hasRole(RoleName.SUPER_ADMIN.name())
+                        .requestMatchers(WHITE_LIST).permitAll()
+                        .anyRequest().authenticated()
                 )
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())

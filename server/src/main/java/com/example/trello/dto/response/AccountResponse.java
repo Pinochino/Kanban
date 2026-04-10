@@ -5,9 +5,7 @@ import lombok.*;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 @Getter
@@ -19,12 +17,13 @@ import java.util.Set;
 @Builder
 public class AccountResponse {
 
-    String id;
+    Long id;
 
     String username;
 
     String email;
 
+    @Builder.Default
     Set<RoleResponse> roles = new HashSet<>();
 
     LocalDateTime createdAt;

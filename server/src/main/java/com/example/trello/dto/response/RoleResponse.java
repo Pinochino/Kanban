@@ -3,6 +3,8 @@ package com.example.trello.dto.response;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
+import java.time.LocalDateTime;
+
 @Getter
 @Setter
 @AllArgsConstructor
@@ -10,8 +12,11 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class RoleResponse {
 
-    Long id;
+    Long roleId;
 
     String name;
 
+    LocalDateTime createdAt;
+
+    LocalDateTime updatedAt;
 }

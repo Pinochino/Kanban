@@ -4,8 +4,10 @@ import com.example.trello.dto.request.DataToolRequest;
 import com.example.trello.dto.response.AccountResponse;
 import com.example.trello.dto.response.AppResponse;
 import com.example.trello.service.account.AccountService;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,15 +16,12 @@ import java.util.List;
 @RestController
 @RequestMapping("/accounts")
 @CrossOrigin
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @Slf4j
 public class AccountController {
 
-    private AccountService accountService;
-
-    @Autowired
-    public AccountController(AccountService accountService) {
-        this.accountService = accountService;
-    }
+    AccountService accountService;
 
     @GetMapping("/list")
     public ResponseEntity<AppResponse<List<AccountResponse>>> getAccounts(

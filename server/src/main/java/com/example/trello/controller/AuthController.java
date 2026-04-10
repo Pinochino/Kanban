@@ -54,11 +54,22 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<AppResponse<Void>> logout(@RequestHeader("Authorization") String authHeader,
-                                                    @CookieValue("REFRESH_TOKEN") String refreshToken
+                                                    @CookieValue("REFRESH_TOKEN") String refreshToken,
+                                                    HttpServletResponse response
+
     ) {
         String accessToken = authHeader.replace("Bearer ", "");
 
         authService.logout(accessToken, refreshToken);
+        
+        Cookie cookie = new Cookie("REFRESH_TOKEN", null);
+        cookie.setPath("/");
+        cookie.setHttpOnly(true);
+        cookie.setMaxAge(0);
+        cookie.setSecure(true);
+
+        response.addCookie(cookie);
+
         return ResponseEntity.ok().body(new AppResponse<>(200, "Logout Successful"));
     }
 

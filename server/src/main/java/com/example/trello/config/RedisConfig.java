@@ -6,11 +6,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
-import org.springframework.data.redis.connection.lettuce.LettuceClientConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 
-import java.time.Duration;
 
 @Configuration
 @Slf4j
@@ -25,11 +23,12 @@ public class RedisConfig {
     @Bean
     public LettuceConnectionFactory lettuceConnectionFactory() {
 
-        LettuceClientConfiguration clientConfig = LettuceClientConfiguration.builder()
-                .useSsl().and()
-                .commandTimeout(Duration.ofSeconds(2))
-                .shutdownTimeout(Duration.ZERO)
-                .build();
+        // LettuceClientConfiguration clientConfig =
+        // LettuceClientConfiguration.builder()
+        // .useSsl().and()
+        // .commandTimeout(Duration.ofSeconds(2))
+        // .shutdownTimeout(Duration.ZERO)
+        // .build();
 
         RedisStandaloneConfiguration configuration = new RedisStandaloneConfiguration(hostName, port);
 

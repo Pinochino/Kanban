@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
 import { useBoards, useCreateBoard } from "@/hooks/useBoards";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Kanban, LogOut, Plus, Shield, Star, Clock, Users } from "lucide-react";
 import { toast } from "sonner";
+import { useAppSelector } from "@/store/hooks";
+import { RootState } from "@/store/store";
 
 const BOARD_COLORS = [
   "#1e40af", "#0f766e", "#9333ea", "#dc2626",
@@ -15,7 +16,19 @@ const BOARD_COLORS = [
 ];
 
 export default function Boards() {
-  const { user, profile, isAdmin, signOut } = useAuth();
+  // const { user, profile, isAdmin, signOut } = useAuth();
+
+
+  const { data: userLogin } = useAppSelector((state: RootState) => state.auth.login);
+  let isAdmin: boolean = false;
+
+  if ( userLogin?.roles[0].name === "SUPER_ADMIN") {
+    isAdmin = true
+  }
+
+  console.log("Is Admin: ", isAdmin)
+
+
   const { data: boards, isLoading } = useBoards();
   const createBoard = useCreateBoard();
   const [open, setOpen] = useState(false);
@@ -25,7 +38,7 @@ export default function Boards() {
   const handleCreate = async () => {
     if (!title.trim()) return;
     try {
-      await createBoard.mutateAsync({ title: title.trim(), background_color: bgColor });
+      // await createBoard.mutateAsync({ title: title.trim(), background_color: bgColor });
       toast.success("Tạo board thành công!");
       setTitle("");
       setOpen(false);
@@ -51,10 +64,10 @@ export default function Boards() {
                 <Link to="/admin"><Shield className="h-4 w-4 mr-1" />Admin</Link>
               </Button>
             )}
-            <span className="text-sm opacity-80">{profile?.full_name}</span>
+            {/* <span className="text-sm opacity-80">{profile?.full_name}</span>
             <Button variant="ghost" size="sm" className="text-primary-foreground hover:bg-primary-foreground/10" onClick={signOut}>
               <LogOut className="h-4 w-4" />
-            </Button>
+            </Button> */}
           </div>
         </div>
       </header>
@@ -130,7 +143,7 @@ export default function Boards() {
 
                       <Button
                         onClick={handleCreate}
-                        disabled={!title.trim() || createBoard.isPending}
+                        // disabled={!title.trim() || createBoard.isPending}
                         className="w-full"
                       >
                         Tạo board
@@ -145,4 +158,6 @@ export default function Boards() {
       </main>
     </div>
   );
+
+
 }
