@@ -1,9 +1,12 @@
 export interface IUser {
+    id?: string;
     username: string;
     email: string;
     password: string;
     createdAt: Date;
     updatedAt: Date;
+    login?: boolean;
+    active?: boolean;
     roles: IRole[];
 }
 

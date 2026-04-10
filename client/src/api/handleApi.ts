@@ -6,7 +6,7 @@ type apiMethod = "GET" | "POST" | "DELETE" | "PUT" | "PATCH";
 interface IHandleApi extends AxiosRequestConfig {
     url: string;
     method: apiMethod;
-    data: unknown
+    data?: unknown
 }
 
 export const handleApi = ({ url, method = "GET", data, ...props }: IHandleApi) => {

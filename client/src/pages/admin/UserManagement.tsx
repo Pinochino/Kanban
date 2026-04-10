@@ -10,89 +10,93 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Search, Lock, Unlock, Trash2, ShieldCheck, Users, UserCheck, UserX, ShieldAlert } from "lucide-react";
+import { Search,  Trash2, ShieldCheck, Users, UserCheck, UserX, ShieldAlert, Pencil, CircleArrowOutUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Database } from "@/integrations/supabase/types";
+import { handleApi } from "@/api/handleApi";
+import { IRole, IUser } from "@/types/UserInterface";
+import { Switch } from "@/components/ui/switch";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
 
 export default function UserManagement() {
+
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | AppRole>("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "locked">("all");
+  const [active, setActive] = useState<boolean>(false);
   const queryClient = useQueryClient();
 
-  const { data: users, isLoading } = useQuery({
-    queryKey: ["admin-users"],
-    queryFn: async () => {
-      const { data: profiles } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
-      const { data: roles } = await supabase.from("user_roles").select("*");
+  console.log("active: ", active)
 
-      return (profiles || []).map((p) => ({
-        ...p,
-        roles: (roles || []).filter((r) => r.user_id === p.user_id).map((r) => r.role),
-      }));
+  const { data: users, isLoading } = useQuery({
+    queryKey: ["users"],
+    queryFn: async () => {
+      const res = await handleApi({ url: "/accounts/list", method: "GET", withCredentials: true });
+      console.log('User data: ', res.data.data)
+      return res.data.data;
     },
   });
 
+
   const toggleLock = useMutation({
-    mutationFn: async ({ userId, lock }: { userId: string; lock: boolean }) => {
-      const { error } = await supabase.from("profiles").update({ is_locked: lock }).eq("user_id", userId);
-      if (error) throw error;
+    mutationFn: async ({ userId, lock }: { userId: number | string; lock: boolean }) => {
+      const res = await handleApi({ url: `/accounts/update-active/${userId}?active=${lock}`, method: "PATCH", data: lock, withCredentials: true })
+      return res.data.data
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["users"] });
       toast.success("Cập nhật thành công!");
     },
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const deleteUser = useMutation({
-    mutationFn: async (userId: string) => {
-      // Delete profile (cascade will handle related data)
-      const { error } = await supabase.from("profiles").delete().eq("user_id", userId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
-      toast.success("Đã xóa người dùng!");
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
+  // const deleteUser = useMutation({
+  //   mutationFn: async (userId: string) => {
+  //     // Delete profile (cascade will handle related data)
+  //     const { error } = await supabase.from("profiles").delete().eq("user_id", userId);
+  //     if (error) throw error;
+  //   },
+  //   onSuccess: () => {
+  //     queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+  //     toast.success("Đã xóa người dùng!");
+  //   },
+  //   onError: (err: Error) => toast.error(err.message),
+  // });
 
-  const changeRole = useMutation({
-    mutationFn: async ({ userId, newRole }: { userId: string; newRole: AppRole }) => {
-      // Delete existing roles then insert new one
-      await supabase.from("user_roles").delete().eq("user_id", userId);
-      const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: newRole });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
-      toast.success("Đã cập nhật vai trò!");
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
+  // const changeRole = useMutation({
+  //   mutationFn: async ({ userId, newRole }: { userId: string; newRole: AppRole }) => {
+  //     // Delete existing roles then insert new one
+  //     await supabase.from("user_roles").delete().eq("user_id", userId);
+  //     const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: newRole });
+  //     if (error) throw error;
+  //   },
+  //   onSuccess: () => {
+  //     queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+  //     toast.success("Đã cập nhật vai trò!");
+  //   },
+  //   onError: (err: Error) => toast.error(err.message),
+  // });
 
-  const filtered = users?.filter((u) => {
-    const q = search.trim().toLowerCase();
-    const name = (u.full_name || "").toLowerCase();
-    const id = u.user_id.toLowerCase();
+  // const filtered = users?.filter((u) => {
+  //   const q = search.trim().toLowerCase();
+  //   const name = (u.full_name || "").toLowerCase();
+  //   const id = u.user_id.toLowerCase();
 
-    const matchesSearch = !q || name.includes(q) || id.includes(q);
-    const matchesRole = roleFilter === "all" || u.roles.includes(roleFilter);
-    const matchesStatus =
-      statusFilter === "all" ||
-      (statusFilter === "active" && !u.is_locked) ||
-      (statusFilter === "locked" && u.is_locked);
+  //   const matchesSearch = !q || name.includes(q) || id.includes(q);
+  //   const matchesRole = roleFilter === "all" || u.roles.includes(roleFilter);
+  //   const matchesStatus =
+  //     statusFilter === "all" ||
+  //     (statusFilter === "active" && !u.is_locked) ||
+  //     (statusFilter === "locked" && u.is_locked);
 
-    return matchesSearch && matchesRole && matchesStatus;
-  }) ?? [];
+  //   return matchesSearch && matchesRole && matchesStatus;
+  // }) ?? [];
 
-  const totalUsers = users?.length ?? 0;
-  const lockedUsers = users?.filter((u) => u.is_locked).length ?? 0;
-  const activeUsers = totalUsers - lockedUsers;
-  const adminUsers = users?.filter((u) => u.roles.includes("admin")).length ?? 0;
+  // const totalUsers = users?.length ?? 0;
+  // const lockedUsers = users?.filter((u) => u.is_locked).length ?? 0;
+  // const activeUsers = totalUsers - lockedUsers;
+  // const adminUsers = users?.filter((u) => u.roles.includes("SUPER_ADMIN")).length ?? 0;
 
   const roleBadgeVariant = (role: string) => {
     switch (role) {
@@ -103,12 +107,12 @@ export default function UserManagement() {
     }
   };
 
-  const getRoleLabel = (role: AppRole) => {
+  const getRoleLabel = (role: string) => {
     switch (role) {
-      case "admin":
+      case "SUPER_ADMIN":
         return "Admin";
-      case "member":
-        return "Member";
+      case "USER":
+        return "Staff";
       case "guest":
         return "Guest";
       default:
@@ -144,7 +148,7 @@ export default function UserManagement() {
             </p>
           </div>
           <Badge variant="outline" className="w-fit border-slate-500 bg-slate-800/60 px-3 py-1 text-slate-100">
-            {filtered.length} kết quả hiển thị
+            {Array.isArray(users) && Array.from(users).length} kết quả hiển thị
           </Badge>
         </CardContent>
       </Card>
@@ -153,7 +157,7 @@ export default function UserManagement() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Tổng người dùng</CardDescription>
-            <CardTitle className="text-2xl">{totalUsers}</CardTitle>
+            <CardTitle className="text-2xl"> {Array.isArray(users) && Array.from(users).length}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
@@ -166,7 +170,7 @@ export default function UserManagement() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Đang hoạt động</CardDescription>
-            <CardTitle className="text-2xl">{activeUsers}</CardTitle>
+            <CardTitle className="text-2xl"> {Array.isArray(users) && Array.from(users).length}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
@@ -179,7 +183,7 @@ export default function UserManagement() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Tài khoản bị khóa</CardDescription>
-            <CardTitle className="text-2xl">{lockedUsers}</CardTitle>
+            <CardTitle className="text-2xl"> {Array.isArray(users) && Array.from(users).length}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
@@ -192,7 +196,7 @@ export default function UserManagement() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Quyền admin</CardDescription>
-            <CardTitle className="text-2xl">{adminUsers}</CardTitle>
+            <CardTitle className="text-2xl"> {Array.isArray(users) && Array.from(users).length}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
@@ -253,11 +257,12 @@ export default function UserManagement() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Người dùng</TableHead>
-                  <TableHead>Vai trò hiện tại</TableHead>
-                  <TableHead>Trạng thái</TableHead>
-                  <TableHead>Ngày tạo</TableHead>
-                  <TableHead className="text-right">Hành động</TableHead>
+                  <TableHead>Username</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Created At</TableHead>
+                  <TableHead>Active</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -267,110 +272,121 @@ export default function UserManagement() {
                       Đang tải dữ liệu người dùng...
                     </TableCell>
                   </TableRow>
-                ) : filtered.length === 0 ? (
+                ) : !Array.isArray(users) && Array.from(users).length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
                       Không có người dùng phù hợp với bộ lọc hiện tại.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filtered.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10 border">
-                            <AvatarImage src={user.avatar_url || undefined} alt={user.full_name || "User"} />
-                            <AvatarFallback>{getInitials(user.full_name)}</AvatarFallback>
-                          </Avatar>
-                          <div className="space-y-0.5">
-                            <p className="font-medium">{user.full_name || "Chưa cập nhật tên"}</p>
-                            <p className="text-xs text-muted-foreground">ID: {user.user_id}</p>
-                          </div>
-                        </div>
-                      </TableCell>
+                  Array.from(users).map((user: IUser) => {
 
-                      <TableCell>
-                        <div className="space-y-2">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            {user.roles.map((r) => (
-                              <Badge key={r} variant={roleBadgeVariant(r) as "default" | "secondary" | "outline"}>
-                                {getRoleLabel(r as AppRole)}
-                              </Badge>
-                            ))}
+                    console.log("user data: ", user)
+
+                    return (
+                      <TableRow key={user.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-10 w-10 border">
+                              <AvatarImage
+                                // src={user?.avatar_url || undefined} 
+
+                                alt={user.username || "User"} />
+                              <AvatarFallback>{getInitials(user.username)}</AvatarFallback>
+                            </Avatar>
+                            <div className="space-y-0.5">
+                              <p className="font-medium">{user.username || "Chưa cập nhật tên"}</p>
+                              <p className="text-xs text-muted-foreground">ID: {user.id}</p>
+                            </div>
                           </div>
-                          <Select
-                            onValueChange={(val) => changeRole.mutate({ userId: user.user_id, newRole: val as AppRole })}
+                        </TableCell>
+
+                        <TableCell>
+                          <div className="space-y-2">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              {user.roles.map((r: IRole) => (
+                                <Badge key={r.id} variant={roleBadgeVariant(r.name) as "default" | "secondary" | "outline"}>
+                                  {getRoleLabel(r.name as string)}
+                                </Badge>
+                              ))}
+                            </div>
+
+                          </div>
+                        </TableCell>
+
+                        <TableCell>
+                          <Badge
+                            variant={!user.login ? "destructive" : "outline"}
+                            className={cn(user.login && "border-emerald-200 bg-emerald-50 text-emerald-700")}
                           >
-                            <SelectTrigger className="h-8 w-[130px] text-xs">
-                              <SelectValue placeholder="Đổi vai trò" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="admin">Admin</SelectItem>
-                              <SelectItem value="member">Member</SelectItem>
-                              <SelectItem value="guest">Guest</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </TableCell>
+                            {!user.login ? "Không hoạt động" : "Hoạt động"}
+                          </Badge>
+                        </TableCell>
 
-                      <TableCell>
-                        <Badge
-                          variant={user.is_locked ? "destructive" : "outline"}
-                          className={cn(!user.is_locked && "border-emerald-200 bg-emerald-50 text-emerald-700")}
-                        >
-                          {user.is_locked ? "Đã khóa" : "Hoạt động"}
-                        </Badge>
-                      </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {new Date(user.createdAt).toLocaleDateString("vi-VN")}
+                        </TableCell>
 
-                      <TableCell className="text-sm text-muted-foreground">
-                        {new Date(user.created_at).toLocaleDateString("vi-VN")}
-                      </TableCell>
+                        <TableCell>
+                          <Switch defaultChecked={user.active} onCheckedChange={(checked) => {
+                            setActive(checked)
+                            toggleLock.mutate({ userId: user.id, lock: active })
+                          }} />
+                        </TableCell>
 
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            {/* <Button
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8"
-                            onClick={() => toggleLock.mutate({ userId: user.user_id, lock: !user.is_locked })}
+                            // onClick={() => toggleLock.mutate({ userId: user.user_id, lock: !user.is_locked })}
                             title={user.is_locked ? "Mở khóa tài khoản" : "Khóa tài khoản"}
                           >
                             {user.is_locked ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
-                          </Button>
+                          </Button> */}
 
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-destructive hover:text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Xác nhận xóa người dùng?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Bạn sắp xóa tài khoản <strong>{user.full_name || user.user_id}</strong>. Hành động này
-                                  không thể hoàn tác.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Hủy</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => deleteUser.mutate(user.user_id)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            <Button variant="default" className="bg-blue-400  " size="sm"><CircleArrowOutUpRight size={10} /></Button>
+                            <Button variant="default" className="bg-orange-400 " size="sm"><Pencil size={10} /></Button>
+
+                            {/* DELETE USER */}
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="default"
+                                  size="icon"
+                                  className="bg-red-400"
                                 >
-                                  Xóa người dùng
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Xác nhận xóa người dùng?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Bạn sắp xóa tài khoản <strong>{user.username || user.id}</strong>. Hành động này
+                                    không thể hoàn tác.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Hủy</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    // onClick={() => deleteUser.mutate(user.user_id)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    Xóa người dùng
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+
+
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  }
+                  )
                 )}
               </TableBody>
             </Table>

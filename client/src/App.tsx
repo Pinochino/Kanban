@@ -1,9 +1,9 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { ProtectedRoute, AdminRoute } from "@/components/ProtectedRoute";
+import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
+import {BrowserRouter, Route, Routes} from "react-router-dom";
+import {Toaster as Sonner} from "@/components/ui/sonner";
+import {Toaster} from "@/components/ui/toaster";
+import {TooltipProvider} from "@/components/ui/tooltip";
+import {ProtectedRoute, AdminRoute} from "@/components/ProtectedRoute";
 import Boards from "./pages/Boards";
 import BoardView from "./pages/BoardView";
 import Auth from "./pages/Auth";
@@ -14,29 +14,29 @@ import UserManagement from "./pages/admin/UserManagement";
 import Moderation from "./pages/admin/Moderation";
 import NotificationControl from "./pages/admin/NotificationControl";
 import GlobalProvider from "./hooks/providers/GlobalProvider";
-import { AuthProvider } from "./hooks/providers/AuthProvider";
+import {AuthProvider} from "./hooks/providers/AuthProvider";
 import ProjectManagement from "./pages/admin/ProjectManagement";
 
 const queryClient = new QueryClient();
 
 const App = () => (
-  <GlobalProvider>
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {/* PUBLIC ROUTE */}
-            <Route path="/auth" element={<Auth />} />
+    <GlobalProvider>
+        <QueryClientProvider client={queryClient}>
+            <TooltipProvider>
+                <Toaster/>
+                <Sonner/>
+                <BrowserRouter>
+                    <Routes>
+                        {/* PUBLIC ROUTE */}
+                        <Route path="/auth" element={<Auth/>}/>
 
-            {/* PROTECTED */}
-            <Route
-              path="/*"
-              element={
-                // <AuthProvider>
-                <Routes>
-                  {/* <Route path="/" element={
+                        {/* PROTECTED */}
+                        <Route
+                            path="/*"
+                            element={
+                                <AuthProvider>
+                                    <Routes>
+                                        {/* <Route path="/" element={
                     // <ProtectedRoute>
                     <Boards />
                     // </ProtectedRoute>
@@ -44,29 +44,29 @@ const App = () => (
                   />
                   <Route path="/board/:id" element={<ProtectedRoute><BoardView /></ProtectedRoute>} /> */}
 
-                  <Route path="/" element={
-                    // <AdminRoute>
-                    <AdminLayout />
-                    // </AdminRoute>
-                  }
-                  >
-                    <Route index element={<AdminDashboard />} />
-                    <Route path="users" element={<UserManagement />} />
-                    <Route path="projects" element={<ProjectManagement />} />
-                    <Route path="moderation" element={<Moderation />} />
-                    <Route path="notifications" element={<NotificationControl />} />
-                  </Route>
+                                        <Route path="/" element={
+                                            <AdminRoute>
+                                                <AdminLayout/>
+                                            </AdminRoute>
+                                        }
+                                        >
+                                            <Route index element={<AdminDashboard/>}/>
+                                            <Route path="users" element={<UserManagement/>}/>
+                                            <Route path="projects" element={<ProjectManagement/>}/>
+                                            <Route path="moderation" element={<Moderation/>}/>
+                                            <Route path="notifications" element={<NotificationControl/>}/>
+                                        </Route>
 
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-                // </AuthProvider>
-              }
-            />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
-  </GlobalProvider>
+                                        <Route path="*" element={<NotFound/>}/>
+                                    </Routes>
+                                </AuthProvider>
+                            }
+                        />
+                    </Routes>
+                </BrowserRouter>
+            </TooltipProvider>
+        </QueryClientProvider>
+    </GlobalProvider>
 );
 
 export default App;

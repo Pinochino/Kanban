@@ -18,6 +18,8 @@ axiosClient.interceptors.request.use(function (config) {
         config.headers.Authorization = `Bearer ${token}`
     }
 
+    console.log("access token: ", token)
+
     return config;
 }, function (error) {
     // Do something with request error
@@ -64,8 +66,7 @@ axiosClient.interceptors.response.use(
                 });
 
 
-                const newAccessToken = res.data.accessToken;
-
+                const newAccessToken = res.data.data;
 
                 setAccessToken(newAccessToken);
 
