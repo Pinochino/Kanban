@@ -13,8 +13,6 @@ import java.util.Set;
 @AllArgsConstructor
 @NoArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-@JsonInclude(JsonInclude.Include.NON_NULL)
-@Builder
 public class AccountResponse {
 
     Long id;
@@ -23,7 +21,10 @@ public class AccountResponse {
 
     String email;
 
-    @Builder.Default
+    boolean isLogin;
+
+    boolean isActive;
+
     Set<RoleResponse> roles = new HashSet<>();
 
     LocalDateTime createdAt;

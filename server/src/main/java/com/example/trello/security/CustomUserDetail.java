@@ -39,7 +39,7 @@ public class CustomUserDetail implements UserDetails, CredentialsContainer {
     }
 
     @Override
-    public  String getUsername() {
+    public String getUsername() {
         return account.getEmail();
     }
 
@@ -60,7 +60,7 @@ public class CustomUserDetail implements UserDetails, CredentialsContainer {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return account.isActive();
     }
 
     @Override
