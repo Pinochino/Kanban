@@ -25,7 +25,7 @@ public class TaskAttachment extends AbstractEntity implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long attachmentId;
+    private Long id;
 
     @ManyToOne
     @JoinColumn(name = "task_id")

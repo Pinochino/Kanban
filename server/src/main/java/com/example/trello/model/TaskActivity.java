@@ -26,7 +26,7 @@ public class TaskActivity extends AbstractEntity implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(nullable = false)
-    private Long taskActivityId;
+    private Long id;
 
     @Enumerated(EnumType.STRING)
     ActionType actionType;

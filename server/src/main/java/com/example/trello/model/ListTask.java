@@ -29,7 +29,7 @@ public class ListTask extends AbstractEntity implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Long listTaskId;
+    Long id;
 
     @Enumerated(EnumType.STRING)
     ListTaskStatus status;

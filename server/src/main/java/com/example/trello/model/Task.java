@@ -31,7 +31,7 @@ public class Task extends AbstractEntity implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Long taskId;
+    Long id;
 
     @Column(unique = true)
     String title;

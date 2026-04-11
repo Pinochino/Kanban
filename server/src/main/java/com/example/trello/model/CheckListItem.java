@@ -25,7 +25,7 @@ public class CheckListItem extends AbstractEntity implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Long checklistItemId;
+    Long id;
 
     String content;
 

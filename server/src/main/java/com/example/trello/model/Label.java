@@ -1,35 +1,37 @@
 package com.example.trello.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.io.Serial;
 import java.io.Serializable;
 
 @Entity
-@Table(name = "project_label")
+@Table
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-@EntityListeners(AuditingEntityListener.class)
-public class ProjectLabel extends AbstractEntity implements Serializable {
+@Builder
+public class Label extends AbstractEntity implements Serializable {
 
     @Serial
-    static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
 
-    String name;
+    String title;
 
-    String colour;
+    String color;
 
     @ManyToOne
     @JoinColumn(name = "project_id")
+    @JsonBackReference
     Project project;
+
 }

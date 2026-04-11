@@ -7,6 +7,7 @@ import lombok.*;
 import lombok.experimental.FieldDefaults;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.awt.*;
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -29,7 +30,7 @@ public class Project extends AbstractEntity implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Long projectId;
+    Long id;
 
     String title;
 
@@ -48,14 +49,14 @@ public class Project extends AbstractEntity implements Serializable {
     Account account;
 
     @Builder.Default
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "project")
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "project", orphanRemoval = true)
     @JsonManagedReference
     List<ListTask> listTasks = new ArrayList<>();
 
     @Builder.Default
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "project")
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "project", orphanRemoval = true)
     @JsonManagedReference
-    List<ProjectLabel> projectLabels = new ArrayList<>();
+    List<Label> listLabels = new ArrayList<>();
 
 
 }

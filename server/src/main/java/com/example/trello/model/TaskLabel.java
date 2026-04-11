@@ -23,13 +23,14 @@ public class TaskLabel extends AbstractEntity implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Long taskLabelId;
+    Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "project_label_id")
-    ProjectLabel projectLabel;
 
     @ManyToOne
     @JoinColumn(name = "task_id")
     Task task;
+
+    @ManyToOne
+    @JoinColumn(name = "label_id")
+    Label label;
 }

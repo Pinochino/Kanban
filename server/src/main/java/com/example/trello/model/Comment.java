@@ -26,7 +26,7 @@ public class Comment extends AbstractEntity implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Long commentId;
+    Long id;
 
     String comment;
 

@@ -41,8 +41,12 @@ public enum ErrorCode {
     TASK_ALREADY_EXIST(117, "Task already exist", HttpStatus.CONFLICT),
 
 
-//    LIST_TASK
+    //    LIST_TASK
     LIST_TASK_NOT_FOUND(118, "List Task Not Found", HttpStatus.NOT_FOUND),
+
+    //    LABEL
+    LABEL_NOT_FOUND(119, "Label Not Found", HttpStatus.NOT_FOUND),
+    LABEL_ALREADY_EXIST(120, "Label already exist", HttpStatus.CONFLICT),
 
 
     ;

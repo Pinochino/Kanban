@@ -11,7 +11,7 @@ import java.util.Optional;
 @Repository
 public interface ListTaskRepository extends JpaRepository<ListTask, Long> {
 
-    @Query("select lt from ListTask lt where lt.project.projectId=?1")
+    @Query("select lt from ListTask lt where lt.project.id=?1")
     Optional<ListTask> findByProjectId(Long projectId);
 
 }

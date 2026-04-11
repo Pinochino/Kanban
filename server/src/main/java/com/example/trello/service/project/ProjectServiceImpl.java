@@ -64,7 +64,7 @@ public class ProjectServiceImpl implements ProjectService {
 
         newProject = projectRepository.save(newProject);
 
-        Optional<ListTask> oldListTask = listTaskRepository.findByProjectId(newProject.getProjectId());
+        Optional<ListTask> oldListTask = listTaskRepository.findByProjectId(newProject.getId());
         List<ListTask> listTasks = List.of(
                 new ListTask(ListTaskStatus.IN_PROGRESS, newProject),
                 new ListTask(ListTaskStatus.TO_DO, newProject),
