@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { Link } from "react-router-dom";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -10,30 +10,75 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Search,  Trash2, ShieldCheck, Users, UserCheck, UserX, ShieldAlert, Pencil, CircleArrowOutUpRight } from "lucide-react";
+import { Search, Trash2, ShieldCheck, Users, UserCheck, UserX, ShieldAlert, Pencil, CircleArrowOutUpRight, ArchiveRestore } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Database } from "@/integrations/supabase/types";
 import { handleApi } from "@/api/handleApi";
 import { IRole, IUser } from "@/types/UserInterface";
 import { Switch } from "@/components/ui/switch";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
-type AppRole = Database["public"]["Enums"]["app_role"];
+type RoleFilter = "all" | "SUPER_ADMIN" | "USER";
+
+type UserFormState = {
+  id: string;
+  username: string;
+  email: string;
+  active: boolean;
+  role: "SUPER_ADMIN" | "USER";
+};
 
 export default function UserManagement() {
 
   const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState<"all" | AppRole>("all");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "locked">("all");
-  const [active, setActive] = useState<boolean>(false);
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "online" | "offline">("all");
+  const [detailUserId, setDetailUserId] = useState<string | null>(null);
+  const [editingUser, setEditingUser] = useState<UserFormState | null>(null);
   const queryClient = useQueryClient();
 
-  console.log("active: ", active)
 
   const { data: users, isLoading } = useQuery({
     queryKey: ["users"],
     queryFn: async () => {
       const res = await handleApi({ url: "/accounts/list", method: "GET", withCredentials: true });
       console.log('User data: ', res.data.data)
+      return res.data.data;
+    },
+  });
+
+  const { data: detailUser, isLoading: detailLoading } = useQuery({
+    queryKey: ["user-detail", detailUserId],
+    queryFn: async () => {
+      if (!detailUserId) {
+        return null;
+      }
+      const res = await handleApi({ url: `/accounts/detail/${detailUserId}`, method: "GET", withCredentials: true });
+      return res.data.data as IUser;
+    },
+    enabled: Boolean(detailUserId),
+  });
+
+  const { data: userActiveNum } = useQuery({
+    queryKey: ["userActiveNum"],
+    queryFn: async () => {
+      const res = await handleApi({ url: "/accounts/count-active?active=false", method: "GET", withCredentials: true });
+      return res.data.data;
+    },
+  });
+
+  const { data: userLoginNum } = useQuery({
+    queryKey: ["userLoginNum"],
+    queryFn: async () => {
+      const res = await handleApi({ url: "/accounts/count-login?login=true", method: "GET", withCredentials: true });
+      return res.data.data;
+    },
+  });
+
+  const { data: userAdminNum } = useQuery({
+    queryKey: ["userAdminNum"],
+    queryFn: async () => {
+      const res = await handleApi({ url: "/accounts/count-by-role?name=SUPER_ADMIN", method: "GET", withCredentials: true });
       return res.data.data;
     },
   });
@@ -46,23 +91,79 @@ export default function UserManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["userActiveNum"] });
       toast.success("Cập nhật thành công!");
     },
     onError: (err: Error) => toast.error(err.message),
   });
 
-  // const deleteUser = useMutation({
-  //   mutationFn: async (userId: string) => {
-  //     // Delete profile (cascade will handle related data)
-  //     const { error } = await supabase.from("profiles").delete().eq("user_id", userId);
-  //     if (error) throw error;
-  //   },
-  //   onSuccess: () => {
-  //     queryClient.invalidateQueries({ queryKey: ["admin-users"] });
-  //     toast.success("Đã xóa người dùng!");
-  //   },
-  //   onError: (err: Error) => toast.error(err.message),
-  // });
+  const softDeleteUser = useMutation({
+    mutationFn: async (userId: string | number) => {
+      const res = await handleApi({
+        url: `/accounts/update-active/${userId}?active=false`,
+        method: "PATCH",
+        withCredentials: true,
+      });
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["userActiveNum"] });
+      toast.success("Đã chuyển user sang trạng thái xóa mềm.");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const updateUser = useMutation({
+    mutationFn: async (payload: UserFormState) => {
+      const existing = Array.isArray(users) ? users.find((u: IUser) => String(u.id) === payload.id) : null;
+
+      if (existing && existing.active !== payload.active) {
+        await handleApi({
+          url: `/accounts/update-active/${payload.id}?active=${payload.active}`,
+          method: "PATCH",
+          withCredentials: true,
+        });
+      }
+
+      return payload;
+    },
+    onSuccess: (payload) => {
+      queryClient.setQueryData(["users"], (oldData: IUser[] | undefined) => {
+        if (!Array.isArray(oldData)) {
+          return oldData;
+        }
+
+        return oldData.map((item) => {
+          if (String(item.id) !== payload.id) {
+            return item;
+          }
+
+          return {
+            ...item,
+            username: payload.username,
+            email: payload.email,
+            active: payload.active,
+            roles: item.roles.map((role, index) => {
+              if (index !== 0) {
+                return role;
+              }
+              return {
+                ...role,
+                name: payload.role,
+              };
+            }),
+          };
+        });
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["userActiveNum"] });
+      setEditingUser(null);
+      toast.success("Đã cập nhật user trên giao diện.");
+      toast.info("API cập nhật username/email chưa có trên backend, hiện chỉ lưu tạm ở client.");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
 
   // const changeRole = useMutation({
   //   mutationFn: async ({ userId, newRole }: { userId: string; newRole: AppRole }) => {
@@ -97,6 +198,40 @@ export default function UserManagement() {
   // const lockedUsers = users?.filter((u) => u.is_locked).length ?? 0;
   // const activeUsers = totalUsers - lockedUsers;
   // const adminUsers = users?.filter((u) => u.roles.includes("SUPER_ADMIN")).length ?? 0;
+
+  const handleLockUser = async (userId: number | string, lock: boolean) => {
+    await toggleLock.mutateAsync({ userId, lock });
+  };
+
+  const filteredUsers = useMemo(() => {
+    if (!Array.isArray(users)) {
+      return [];
+    }
+
+    const q = search.trim().toLowerCase();
+
+    return users.filter((u: IUser) => {
+      const roleNames = (u.roles || []).map((r) => r.name);
+      const matchesSearch = !q || (u.username || "").toLowerCase().includes(q) || String(u.id).includes(q);
+      const matchesRole = roleFilter === "all" || roleNames.includes(roleFilter);
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "online" && Boolean(u.login)) ||
+        (statusFilter === "offline" && !u.login);
+
+      return matchesSearch && matchesRole && matchesStatus;
+    });
+  }, [users, search, roleFilter, statusFilter]);
+
+  const openUpdateDialog = (user: IUser) => {
+    setEditingUser({
+      id: String(user.id),
+      username: user.username || "",
+      email: user.email || "",
+      active: Boolean(user.active),
+      role: user.roles.some((role) => role.name === "SUPER_ADMIN") ? "SUPER_ADMIN" : "USER",
+    });
+  };
 
   const roleBadgeVariant = (role: string) => {
     switch (role) {
@@ -147,9 +282,17 @@ export default function UserManagement() {
               Quản trị tài khoản, phân quyền, trạng thái khóa/mở khóa và theo dõi truy cập trên toàn hệ thống.
             </p>
           </div>
-          <Badge variant="outline" className="w-fit border-slate-500 bg-slate-800/60 px-3 py-1 text-slate-100">
-            {Array.isArray(users) && Array.from(users).length} kết quả hiển thị
-          </Badge>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button asChild variant="secondary" className="bg-white text-slate-900 hover:bg-slate-100">
+              <Link to="/users/deleted">
+                <ArchiveRestore className="mr-1 h-4 w-4" />
+                User đã xóa mềm
+              </Link>
+            </Button>
+            <Badge variant="outline" className="w-fit border-slate-500 bg-slate-800/60 px-3 py-1 text-slate-100">
+              {filteredUsers.length} kết quả hiển thị
+            </Badge>
+          </div>
         </CardContent>
       </Card>
 
@@ -170,7 +313,7 @@ export default function UserManagement() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Đang hoạt động</CardDescription>
-            <CardTitle className="text-2xl"> {Array.isArray(users) && Array.from(users).length}</CardTitle>
+            <CardTitle className="text-2xl"> {userLoginNum}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
@@ -183,7 +326,7 @@ export default function UserManagement() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Tài khoản bị khóa</CardDescription>
-            <CardTitle className="text-2xl"> {Array.isArray(users) && Array.from(users).length}</CardTitle>
+            <CardTitle className="text-2xl"> {userActiveNum}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
@@ -196,7 +339,7 @@ export default function UserManagement() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Quyền admin</CardDescription>
-            <CardTitle className="text-2xl"> {Array.isArray(users) && Array.from(users).length}</CardTitle>
+            <CardTitle className="text-2xl"> {userAdminNum}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
@@ -226,29 +369,28 @@ export default function UserManagement() {
               />
             </div>
 
-            <Select value={roleFilter} onValueChange={(value) => setRoleFilter(value as "all" | AppRole)}>
+            <Select value={roleFilter} onValueChange={(value) => setRoleFilter(value as RoleFilter)}>
               <SelectTrigger>
                 <SelectValue placeholder="Lọc vai trò" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất cả vai trò</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="member">Member</SelectItem>
-                <SelectItem value="guest">Guest</SelectItem>
+                <SelectItem value="SUPER_ADMIN">Admin</SelectItem>
+                <SelectItem value="USER">User</SelectItem>
               </SelectContent>
             </Select>
 
             <Select
               value={statusFilter}
-              onValueChange={(value) => setStatusFilter(value as "all" | "active" | "locked")}
+              onValueChange={(value) => setStatusFilter(value as "all" | "online" | "offline")}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Lọc trạng thái" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                <SelectItem value="active">Đang hoạt động</SelectItem>
-                <SelectItem value="locked">Đã khóa</SelectItem>
+                <SelectItem value="online">Đang hoạt động</SelectItem>
+                <SelectItem value="offline">Không hoạt động</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -268,20 +410,18 @@ export default function UserManagement() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+                    <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
                       Đang tải dữ liệu người dùng...
                     </TableCell>
                   </TableRow>
-                ) : !Array.isArray(users) && Array.from(users).length === 0 ? (
+                ) : filteredUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+                    <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
                       Không có người dùng phù hợp với bộ lọc hiện tại.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  Array.from(users).map((user: IUser) => {
-
-                    console.log("user data: ", user)
+                  filteredUsers.map((user: IUser) => {
 
                     return (
                       <TableRow key={user.id}>
@@ -328,53 +468,55 @@ export default function UserManagement() {
                         </TableCell>
 
                         <TableCell>
-                          <Switch defaultChecked={user.active} onCheckedChange={(checked) => {
-                            setActive(checked)
-                            toggleLock.mutate({ userId: user.id, lock: active })
-                          }} />
+                          <Switch defaultChecked={user.active} onCheckedChange={(checked) => handleLockUser(user.id, checked)} />
                         </TableCell>
 
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
-                            {/* <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            // onClick={() => toggleLock.mutate({ userId: user.user_id, lock: !user.is_locked })}
-                            title={user.is_locked ? "Mở khóa tài khoản" : "Khóa tài khoản"}
-                          >
-                            {user.is_locked ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
-                          </Button> */}
 
-                            <Button variant="default" className="bg-blue-400  " size="sm"><CircleArrowOutUpRight size={10} /></Button>
-                            <Button variant="default" className="bg-orange-400 " size="sm"><Pencil size={10} /></Button>
+                            <Button
+                              variant="default"
+                              className="bg-blue-500 hover:bg-blue-600"
+                              size="sm"
+                              onClick={() => setDetailUserId(String(user.id))}
+                            >
+                              <CircleArrowOutUpRight size={12} />
+                            </Button>
 
-                            {/* DELETE USER */}
+                            <Button
+                              variant="default"
+                              className="bg-orange-500 hover:bg-orange-600"
+                              size="sm"
+                              onClick={() => openUpdateDialog(user)}
+                            >
+                              <Pencil size={12} />
+                            </Button>
+
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button
                                   variant="default"
                                   size="icon"
-                                  className="bg-red-400"
+                                  className="bg-red-500 hover:bg-red-600"
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               </AlertDialogTrigger>
                               <AlertDialogContent>
                                 <AlertDialogHeader>
-                                  <AlertDialogTitle>Xác nhận xóa người dùng?</AlertDialogTitle>
+                                  <AlertDialogTitle>Xác nhận xóa mềm người dùng?</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    Bạn sắp xóa tài khoản <strong>{user.username || user.id}</strong>. Hành động này
-                                    không thể hoàn tác.
+                                    Tài khoản <strong>{user.username || user.id}</strong> sẽ bị ẩn khỏi danh sách chính
+                                    và có thể khôi phục ở trang user đã xóa mềm.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                   <AlertDialogCancel>Hủy</AlertDialogCancel>
                                   <AlertDialogAction
-                                    // onClick={() => deleteUser.mutate(user.user_id)}
+                                    onClick={() => softDeleteUser.mutate(user.id)}
                                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                   >
-                                    Xóa người dùng
+                                    Xóa mềm
                                   </AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
@@ -393,6 +535,124 @@ export default function UserManagement() {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={Boolean(detailUserId)} onOpenChange={(open) => !open && setDetailUserId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Chi tiết người dùng</DialogTitle>
+            <DialogDescription>Thông tin tài khoản và trạng thái hiện tại.</DialogDescription>
+          </DialogHeader>
+
+          {detailLoading ? (
+            <p className="text-sm text-muted-foreground">Đang tải chi tiết...</p>
+          ) : detailUser ? (
+            <div className="space-y-4 text-sm">
+              <div className="grid grid-cols-[120px_1fr] gap-2">
+                <span className="text-muted-foreground">ID</span>
+                <span className="font-medium">{detailUser.id}</span>
+              </div>
+              <div className="grid grid-cols-[120px_1fr] gap-2">
+                <span className="text-muted-foreground">Username</span>
+                <span className="font-medium">{detailUser.username || "Chưa cập nhật"}</span>
+              </div>
+              <div className="grid grid-cols-[120px_1fr] gap-2">
+                <span className="text-muted-foreground">Email</span>
+                <span className="font-medium">{detailUser.email || "Chưa cập nhật"}</span>
+              </div>
+              <div className="grid grid-cols-[120px_1fr] gap-2">
+                <span className="text-muted-foreground">Vai trò</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {detailUser.roles?.map((role) => (
+                    <Badge key={role.id}>{getRoleLabel(role.name)}</Badge>
+                  ))}
+                </div>
+              </div>
+              <div className="grid grid-cols-[120px_1fr] gap-2">
+                <span className="text-muted-foreground">Trạng thái</span>
+                <Badge variant={detailUser.login ? "outline" : "destructive"}>
+                  {detailUser.login ? "Đang hoạt động" : "Không hoạt động"}
+                </Badge>
+              </div>
+              <div className="grid grid-cols-[120px_1fr] gap-2">
+                <span className="text-muted-foreground">Xóa mềm</span>
+                <Badge variant={detailUser.active ? "outline" : "secondary"}>
+                  {detailUser.active ? "Không" : "Đã xóa mềm"}
+                </Badge>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Không lấy được dữ liệu chi tiết.</p>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(editingUser)} onOpenChange={(open) => !open && setEditingUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cập nhật người dùng</DialogTitle>
+            <DialogDescription>Chỉnh sửa nhanh thông tin tài khoản trong trang quản trị.</DialogDescription>
+          </DialogHeader>
+
+          {editingUser && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-username">Username</Label>
+                <Input
+                  id="edit-username"
+                  value={editingUser.username}
+                  onChange={(e) => setEditingUser((prev) => prev ? { ...prev, username: e.target.value } : prev)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-email">Email</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  value={editingUser.email}
+                  onChange={(e) => setEditingUser((prev) => prev ? { ...prev, email: e.target.value } : prev)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-role">Vai trò</Label>
+                <Select
+                  value={editingUser.role}
+                  onValueChange={(value) => setEditingUser((prev) => prev ? { ...prev, role: value as "SUPER_ADMIN" | "USER" } : prev)}
+                >
+                  <SelectTrigger id="edit-role">
+                    <SelectValue placeholder="Chọn vai trò" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="SUPER_ADMIN">Admin</SelectItem>
+                    <SelectItem value="USER">User</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div>
+                  <p className="text-sm font-medium">Trạng thái tài khoản</p>
+                  <p className="text-xs text-muted-foreground">Tắt để chuyển về trạng thái xóa mềm</p>
+                </div>
+                <Switch
+                  checked={editingUser.active}
+                  onCheckedChange={(checked) => setEditingUser((prev) => prev ? { ...prev, active: checked } : prev)}
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingUser(null)}>
+              Hủy
+            </Button>
+            <Button onClick={() => editingUser && updateUser.mutate(editingUser)} disabled={updateUser.isPending}>
+              {updateUser.isPending ? "Đang lưu..." : "Lưu thay đổi"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
