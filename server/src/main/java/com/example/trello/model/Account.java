@@ -56,7 +56,7 @@ public class Account extends AbstractEntity implements Serializable {
     @Builder.Default
     Set<Role> roles = new HashSet<>();
 
-    @OneToMany(mappedBy = "account")
+    @OneToMany(mappedBy = "assignedAccount")
     @JsonBackReference
     @Builder.Default
     List<Project> projects = new ArrayList<>();

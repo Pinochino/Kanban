@@ -12,13 +12,17 @@ import java.time.LocalDateTime;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ProjectResponse {
 
-    Long projectId;
+    Long id;
 
     String title;
 
     String description;
 
     boolean isPublic;
+
+    AccountCreateProjectResponse createdBy;
+
+    AccountAssignedProjectResponse assignedAccount;
 
     LocalDateTime createdAt;
 

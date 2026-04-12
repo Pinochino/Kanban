@@ -17,5 +17,7 @@ public class ProjectRequest {
 
     boolean isPublic;
 
+    Long assignAccountId;
+
 
 }

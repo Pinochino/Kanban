@@ -3,7 +3,7 @@ package com.example.trello.security;
 import com.example.trello.model.Account;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-import org.jspecify.annotations.Nullable;
+import org.jspecify.annotations.NonNull;
 import org.springframework.security.core.CredentialsContainer;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -26,7 +26,7 @@ public class CustomUserDetail implements UserDetails, CredentialsContainer {
     }
 
     @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
+    public @NonNull Collection<? extends GrantedAuthority> getAuthorities() {
         return account.getRoles()
                 .stream()
                 .map(role -> new SimpleGrantedAuthority(prefixRole + role.getName()))
@@ -34,12 +34,12 @@ public class CustomUserDetail implements UserDetails, CredentialsContainer {
     }
 
     @Override
-    public @Nullable String getPassword() {
+    public @NonNull String getPassword() {
         return account.getPassword();
     }
 
     @Override
-    public String getUsername() {
+    public @NonNull String getUsername() {
         return account.getEmail();
     }
 

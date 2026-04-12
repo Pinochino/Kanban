@@ -14,8 +14,6 @@ public class LabelRequest {
     String title;
 
     String color;
-
-
-
+    
     Long projectId;
 }

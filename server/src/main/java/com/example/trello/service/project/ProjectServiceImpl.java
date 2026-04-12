@@ -57,10 +57,11 @@ public class ProjectServiceImpl implements ProjectService {
 
         Project newProject = projectMapper.toProject(projectRequest);
 
+        Account account = accountRepository
+                .findById(projectRequest.getAssignAccountId())
+                .orElseThrow(() -> new AppError(ErrorCode.USER_NOT_FOUND));
 
-        Account account = jwtUtil.getCurrentUserLogin();
-
-        newProject.setAccount(account);
+        newProject.setAssignedAccount(account);
 
         newProject = projectRepository.save(newProject);
 

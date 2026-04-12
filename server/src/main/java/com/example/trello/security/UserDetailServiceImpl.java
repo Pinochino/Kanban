@@ -6,6 +6,7 @@ import com.example.trello.model.Account;
 import com.example.trello.repository.AccountRepository;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -26,7 +27,7 @@ public class UserDetailServiceImpl implements UserDetailsService {
 
 
     @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+    public @NonNull UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 
         Account oldAccount = accountRepository.findUserByEmail(username)
                 .orElseThrow(() -> new AppError(ErrorCode.INVALID_CREDENTIALS));

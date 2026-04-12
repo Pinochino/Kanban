@@ -17,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -57,9 +58,12 @@ public class LabelServiceImpl implements LabelService {
                 .findById(request.getProjectId())
                 .orElseThrow(() -> new AppError(ErrorCode.PROJECT_NOT_FOUND));
 
-        Label label = labelRepository
-                .findLabelByTitle(request.getTitle())
-                .orElseThrow(() -> new AppError(ErrorCode.LABEL_ALREADY_EXIST));
+        Optional<Label> label = labelRepository
+                .findLabelByTitle(request.getTitle());
+
+        if (label.isPresent()) {
+            throw new AppError(ErrorCode.LABEL_ALREADY_EXIST);
+        }
 
         Label newLabel = labelMapper.toDto(request);
         newLabel.setProject(project);

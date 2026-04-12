@@ -33,8 +33,7 @@ public class AccountController {
             @RequestParam(value = "username", required = false) String username,
             @RequestParam(value = "roleId", required = false) Long roleId,
             @RequestParam(value = "active", required = false) Boolean isActive,
-            @RequestParam(value = "login", required = false) Boolean isLogin
-    ) {
+            @RequestParam(value = "login", required = false) Boolean isLogin) {
 
         AccountFilter request = AccountFilter.builder()
                 .username(username)
@@ -80,8 +79,7 @@ public class AccountController {
 
     @GetMapping("/count-active")
     public ResponseEntity<AppResponse<Long>> countActiveAccounts(
-            @RequestParam("active") Boolean active
-    ) {
+            @RequestParam("active") Boolean active) {
         log.info("active {}", active);
 
         Long accountActive = accountService.countAccountLock(active);
@@ -90,16 +88,15 @@ public class AccountController {
 
     @GetMapping("/count-login")
     public ResponseEntity<AppResponse<Long>> countLoginAccounts(
-            @RequestParam("login") Boolean login
-    ) {
+            @RequestParam("login") Boolean login) {
         Long accountLogin = accountService.countAccountLogin(login);
         return ResponseEntity.ok().body(new AppResponse<>(200, "Count login account", accountLogin));
     }
 
     @GetMapping("/count-by-role")
     public ResponseEntity<AppResponse<Long>> countByRoleName(
-            @RequestParam("name") String roleName
-    ) {
+            @RequestParam(name = "name", required = true) String roleName) {
+
         Long accountByRole = accountService.countAccountByRoleName(RoleName.valueOf(roleName));
         return ResponseEntity.ok().body(new AppResponse<>(200, "Count by role", accountByRole));
     }

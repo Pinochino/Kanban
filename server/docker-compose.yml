@@ -3,12 +3,24 @@ services:
   redis:
     image: redis:latest
     container_name: redis-server
-    restart: always
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
-    command: ["redis-server", "--appendonly", "yes"]
+    command: [ "redis-server", "--appendonly", "yes" ]
+
+  db:
+    image: postgres
+    container_name: postgres-db
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: kanban
+      POSTGRES_USERNAME: postgres
+      POSTGRES_PASSWORD: 123456
+    volumes:
+      - /var/lib/postgresql/<version>/main
 
 volumes:
   redis_data:
+  postgres_data:

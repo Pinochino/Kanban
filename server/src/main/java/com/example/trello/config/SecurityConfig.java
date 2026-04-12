@@ -1,12 +1,15 @@
 package com.example.trello.config;
 
 import com.example.trello.constants.RoleName;
+import com.example.trello.model.Account;
+import com.example.trello.repository.AccountRepository;
 import com.example.trello.security.UserDetailServiceImpl;
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.domain.AuditorAware;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -43,14 +46,17 @@ public class SecurityConfig {
 
     CustomAccessDeniedHandler accessDeniedHandler;
     JwtDecoderConfig jwtDecoderConfig;
+    AccountRepository accountRepository;
 
     @Autowired
     public SecurityConfig(CustomAuthenticationEntryPoint authenticationEntryPoint,
                           JwtDecoderConfig jwtDecoderConfig,
-                          CustomAccessDeniedHandler accessDeniedHandler) {
+                          CustomAccessDeniedHandler accessDeniedHandler,
+                          AccountRepository accountRepository) {
         this.authenticationEntryPoint = authenticationEntryPoint;
         this.jwtDecoderConfig = jwtDecoderConfig;
         this.accessDeniedHandler = accessDeniedHandler;
+        this.accountRepository = accountRepository;
     }
 
     @Bean
