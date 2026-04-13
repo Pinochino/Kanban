@@ -11,7 +11,7 @@ public interface AuthService {
     Account findUserByEmail(String email);
 
     @Transactional
-    AccountResponse createUser(RegisterRequest request);
+    LoginResponse createUser(RegisterRequest request);
 
     LoginResponse authenticate(LoginRequest request);
 

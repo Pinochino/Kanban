@@ -24,7 +24,6 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -34,9 +33,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.Date;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
 
 @Service
 @Slf4j
@@ -53,7 +50,6 @@ public class AuthServiceImpl implements AuthService {
     RedisTokenRepository redisTokenRepository;
 
 
-
     @Override
     public Account findUserByEmail(String email) {
         return accountRepository.findUserByEmail(email).orElseThrow(() -> new AppError(ErrorCode.USER_NOT_FOUND));
@@ -61,7 +57,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Transactional
     @Override
-    public AccountResponse createUser(RegisterRequest request) {
+    public LoginResponse createUser(RegisterRequest request) {
         Optional<Account> user = accountRepository.findUserByEmail(request.getEmail());
 
         if (user.isPresent()) {
@@ -81,7 +77,30 @@ public class AuthServiceImpl implements AuthService {
 
         accountRepository.save(newAccount);
 
-        return accountMapper.toResponse(newAccount);
+        AccountResponse accountResponse = accountMapper.toResponse(newAccount);
+        TokenPayload accessTokenPayload = jwtService.generateAccessToken(newAccount);
+        String refreshToken = jwtService.generateRefreshToken();
+
+        redisTokenRepository.save(
+                RedisToken.builder()
+                        .tokenType(TokenType.ACCESS_TOKEN)
+                        .jwtId(accessTokenPayload.getJwtId())
+                        .expiredTime(accessTokenPayload.getExpiredTime().getTime())
+                        .build());
+
+        redisTokenRepository.save(
+                RedisToken.builder()
+                        .tokenType(TokenType.REFRESH_TOKEN)
+                        .expiredTime(Date.from(Instant.now().plusSeconds(60 * 60 * 24 * 7)).getTime())
+                        .jwtId(jwtService.hashRefreshToken(refreshToken))
+                        .userId(newAccount.getId())
+                        .build());
+
+        return LoginResponse.builder()
+                .accessToken(accessTokenPayload.getToken())
+                .refreshToken(refreshToken)
+                .account(accountResponse)
+                .build();
     }
 
     @Override

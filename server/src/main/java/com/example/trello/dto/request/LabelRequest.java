@@ -1,6 +1,5 @@
 package com.example.trello.dto.request;
 
-import jakarta.annotation.security.DenyAll;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 

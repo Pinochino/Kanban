@@ -1,8 +1,8 @@
 package com.example.trello.service.account;
 
 import com.example.trello.constants.RoleName;
-import com.example.trello.dto.request.DataToolRequest;
 import com.example.trello.dto.response.AccountResponse;
+import com.example.trello.model.Account;
 import com.example.trello.specifications.filter.AccountFilter;
 import jakarta.transaction.Transactional;
 
@@ -21,6 +21,8 @@ public interface AccountService {
 
     @Transactional
     void updateActiveAccount(Long id, boolean active);
+
+    Account findAccountByEmail(String email);
 
     Long countAccountLock(boolean active);
 

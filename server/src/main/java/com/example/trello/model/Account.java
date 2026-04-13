@@ -1,6 +1,5 @@
 package com.example.trello.model;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -56,10 +55,10 @@ public class Account extends AbstractEntity implements Serializable {
     @Builder.Default
     Set<Role> roles = new HashSet<>();
 
-    @OneToMany(mappedBy = "assignedAccount")
-    @JsonBackReference
-    @Builder.Default
-    List<Project> projects = new ArrayList<>();
+    // @OneToMany(mappedBy = "assignedAccount")
+    // @JsonBackReference
+    // @Builder.Default
+    // List<Project> projects = new ArrayList<>();
 
     @OneToMany(mappedBy = "account")
     @JsonManagedReference

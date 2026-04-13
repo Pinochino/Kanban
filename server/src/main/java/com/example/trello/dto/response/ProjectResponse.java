@@ -22,8 +22,8 @@ public class ProjectResponse {
 
     AccountCreateProjectResponse createdBy;
 
-    AccountAssignedProjectResponse assignedAccount;
-
+    // AccountAssignedProjectResponse assignedAccount;
+    
     LocalDateTime createdAt;
 
     LocalDateTime updatedAt;

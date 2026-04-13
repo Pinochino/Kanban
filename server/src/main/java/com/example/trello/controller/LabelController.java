@@ -6,7 +6,6 @@ import com.example.trello.dto.response.LabelResponse;
 import com.example.trello.service.label.LabelService;
 import jakarta.validation.Valid;
 import lombok.AccessLevel;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;

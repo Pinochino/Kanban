@@ -3,6 +3,7 @@ package com.example.trello.service.project;
 import com.example.trello.constants.ErrorCode;
 import com.example.trello.constants.ListTaskStatus;
 import com.example.trello.dto.request.ProjectRequest;
+import com.example.trello.dto.response.AccountCreateProjectResponse;
 import com.example.trello.dto.response.ProjectResponse;
 import com.example.trello.exception.AppError;
 import com.example.trello.mapper.ProjectMapper;
@@ -37,7 +38,21 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     public List<ProjectResponse> getProjects() {
-        return projectRepository.findAll().stream().map(projectMapper::toResponse).toList();
+        return projectRepository.findAll().stream().map(project -> {
+            ProjectResponse response = projectMapper.toResponse(project);
+
+            Account account = accountRepository
+                    .findAccountByEmail(project.getCreatedBy())
+                    .orElseThrow(() -> new AppError(ErrorCode.USER_NOT_FOUND));
+
+            AccountCreateProjectResponse accountCreated = AccountCreateProjectResponse.builder()
+                    .id(account.getId())
+                    .username(account.getUsername())
+                    .build();
+
+            response.setCreatedBy(accountCreated);
+            return response;
+        }).toList();
     }
 
     @Override
@@ -57,11 +72,11 @@ public class ProjectServiceImpl implements ProjectService {
 
         Project newProject = projectMapper.toProject(projectRequest);
 
-        Account account = accountRepository
-                .findById(projectRequest.getAssignAccountId())
-                .orElseThrow(() -> new AppError(ErrorCode.USER_NOT_FOUND));
+        // Account account = accountRepository
+        //         .findById(projectRequest.getAssignAccountId())
+        //         .orElseThrow(() -> new AppError(ErrorCode.USER_NOT_FOUND));
 
-        newProject.setAssignedAccount(account);
+        // newProject.setAssignedAccount(account);
 
         newProject = projectRepository.save(newProject);
 
@@ -77,7 +92,19 @@ public class ProjectServiceImpl implements ProjectService {
             listTaskRepository.saveAll(listTasks);
         }
 
-        return projectMapper.toResponse(newProject);
+        Account account = accountRepository
+                .findAccountByEmail(newProject.getCreatedBy())
+                .orElseThrow(() -> new AppError(ErrorCode.USER_NOT_FOUND));
+
+        AccountCreateProjectResponse accountCreated = AccountCreateProjectResponse.builder()
+                .id(account.getId())
+                .username(account.getUsername())
+                .build();
+
+        ProjectResponse projectResponse = projectMapper.toResponse(newProject);
+        projectResponse.setCreatedBy(accountCreated);
+
+        return projectResponse;
     }
 
 
@@ -88,7 +115,7 @@ public class ProjectServiceImpl implements ProjectService {
         Project project = projectRepository.findById(projectId).orElseThrow(() -> new AppError(ErrorCode.PROJECT_NOT_FOUND));
 
         projectRepository.delete(project);
-        account.getProjects().remove(project);
+        // account.getProjects().remove(project);
     }
 
     @Transactional
@@ -96,7 +123,7 @@ public class ProjectServiceImpl implements ProjectService {
     public void deleteAllProjects() {
         Account account = jwtUtil.getCurrentUserLogin();
         projectRepository.deleteAll();
-        account.getProjects().clear();
+        // account.getProjects().clear();
 //        }
     }
 

@@ -47,8 +47,14 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<AppResponse<AccountResponse>> register(@Valid @RequestBody RegisterRequest request) {
-        AccountResponse accountResponse = authService.createUser(request);
+    public ResponseEntity<AppResponse<LoginResponse>> register(@Valid @RequestBody RegisterRequest request,
+                                                               HttpServletResponse response) {
+        LoginResponse accountResponse = authService.createUser(request);
+        Cookie cookie = new Cookie("REFRESH_TOKEN", accountResponse.getRefreshToken());
+        cookie.setPath("/");
+        cookie.setHttpOnly(true);
+        cookie.setSecure(true);
+        response.addCookie(cookie);
         return ResponseEntity.ok().body(new AppResponse<>(200, "Register Successful", accountResponse));
     }
 
@@ -61,7 +67,7 @@ public class AuthController {
         String accessToken = authHeader.replace("Bearer ", "");
 
         authService.logout(accessToken, refreshToken);
-        
+
         Cookie cookie = new Cookie("REFRESH_TOKEN", null);
         cookie.setPath("/");
         cookie.setHttpOnly(true);

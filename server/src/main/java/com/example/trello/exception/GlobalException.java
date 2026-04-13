@@ -2,7 +2,6 @@ package com.example.trello.exception;
 
 import com.example.trello.constants.ErrorCode;
 import com.example.trello.dto.response.AppResponse;
-import com.nimbusds.jose.JOSEException;
 import jakarta.validation.ConstraintViolation;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

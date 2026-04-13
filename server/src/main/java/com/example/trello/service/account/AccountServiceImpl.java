@@ -2,7 +2,6 @@ package com.example.trello.service.account;
 
 import com.example.trello.constants.ErrorCode;
 import com.example.trello.constants.RoleName;
-import com.example.trello.dto.request.DataToolRequest;
 import com.example.trello.dto.response.AccountResponse;
 import com.example.trello.exception.AppError;
 import com.example.trello.mapper.AccountMapper;
@@ -82,6 +81,11 @@ public class AccountServiceImpl implements AccountService {
 
         account.setActive(active);
         account = accountRepository.save(account);
+    }
+
+    @Override
+    public Account findAccountByEmail(String email) {
+        return accountRepository.findAccountByEmail(email).orElseThrow(() -> new AppError(ErrorCode.USER_NOT_FOUND));
     }
 
     @Override

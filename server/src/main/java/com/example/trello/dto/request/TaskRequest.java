@@ -1,6 +1,5 @@
 package com.example.trello.dto.request;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 

@@ -1,15 +1,14 @@
 package com.example.trello.model;
 
-import com.example.trello.security.CustomUserDetail;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.awt.*;
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -45,14 +44,13 @@ public class Project extends AbstractEntity implements Serializable {
     @Builder.Default
     boolean isDeleted = false;
 
-    @ManyToOne
     @CreatedBy
-    Account createdBy;
+    String createdBy;
 
-    @ManyToOne()
-    @JoinColumn(name = "account_id")
-    @JsonManagedReference
-    Account assignedAccount;
+    // @ManyToOne()
+    // @JoinColumn(name = "account_id")
+    // @JsonManagedReference
+    // Account assignedAccount;
 
     @Builder.Default
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "project", orphanRemoval = true)

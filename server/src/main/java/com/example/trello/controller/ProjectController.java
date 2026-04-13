@@ -3,18 +3,12 @@ package com.example.trello.controller;
 import com.example.trello.dto.request.ProjectRequest;
 import com.example.trello.dto.response.AppResponse;
 import com.example.trello.dto.response.ProjectResponse;
-import com.example.trello.model.Account;
-import com.example.trello.security.CustomUserDetail;
 import com.example.trello.service.project.ProjectService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
-import java.nio.file.attribute.UserPrincipal;
 import java.util.List;
 
 @RestController
