@@ -4,6 +4,7 @@ import lombok.*;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -23,7 +24,9 @@ public class ProjectResponse {
     AccountCreateProjectResponse createdBy;
 
     // AccountAssignedProjectResponse assignedAccount;
-    
+
+    List<ListTaskResponse> listTasks;
+
     LocalDateTime createdAt;
 
     LocalDateTime updatedAt;

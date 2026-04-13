@@ -42,7 +42,7 @@ public class ListTask extends AbstractEntity implements Serializable {
     @OneToMany(mappedBy = "listTask", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     @Builder.Default
-    List<Task> tasks = new ArrayList<>();
+    List<Task> taskList = new ArrayList<>();
 
     public ListTask(ListTaskStatus status, Project project) {
         this.status = status;

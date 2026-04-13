@@ -107,7 +107,7 @@ public class TaskServiceImpl implements TaskService {
                 .orElseThrow(() -> new AppError(ErrorCode.LIST_TASK_NOT_FOUND));
 
         account.getTasks().remove(task);
-        listTask.getTasks().remove(task);
+        listTask.getTaskList().remove(task);
         taskRepository.delete(task);
     }
 
@@ -126,7 +126,7 @@ public class TaskServiceImpl implements TaskService {
                 .orElseThrow(() -> new AppError(ErrorCode.LIST_TASK_NOT_FOUND));
 
         account.getTasks().clear();
-        listTask.getTasks().clear();
+        listTask.getTaskList().clear();
         taskRepository.deleteAll();
     }
 

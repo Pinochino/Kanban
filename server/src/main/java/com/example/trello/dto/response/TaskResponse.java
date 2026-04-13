@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 @Builder
 public class TaskResponse {
 
-    Long taskId;
+    Long id;
 
     String title;
 
