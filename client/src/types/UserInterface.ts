@@ -8,6 +8,7 @@ export interface IUser {
     login?: boolean;
     active?: boolean;
     roles: IRole[];
+    deleted?: boolean;
 }
 
 export interface IRole {

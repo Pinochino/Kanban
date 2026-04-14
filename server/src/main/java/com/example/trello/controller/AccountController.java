@@ -1,10 +1,13 @@
 package com.example.trello.controller;
 
 import com.example.trello.constants.RoleName;
+import com.example.trello.dto.request.UpdateAccountRequest;
 import com.example.trello.dto.response.AccountResponse;
 import com.example.trello.dto.response.AppResponse;
+import com.example.trello.model.Account;
 import com.example.trello.service.account.AccountService;
 import com.example.trello.specifications.filter.AccountFilter;
+import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -68,6 +71,14 @@ public class AccountController {
         return ResponseEntity.ok().body(new AppResponse<>(200, "Delete all accounts"));
     }
 
+    @PutMapping("/update/{accountId}")
+    public ResponseEntity<AppResponse<AccountResponse>> updateAccount(@PathVariable Long accountId,
+                                                                      @Valid @RequestBody UpdateAccountRequest request) {
+        AccountResponse accountResponse = accountService.updateAccount(accountId, request);
+        return ResponseEntity.ok().body(new AppResponse<>(200, "Update account successfully", accountResponse));
+    }
+
+
     @PatchMapping("/update-active/{accountId}")
     public ResponseEntity<AppResponse<Void>> updateAccountActive(
             @PathVariable("accountId") Long accountId,
@@ -83,14 +94,14 @@ public class AccountController {
         log.info("active {}", active);
 
         Long accountActive = accountService.countAccountLock(active);
-        return ResponseEntity.ok().body(new AppResponse<>(200, "Count active account", accountActive));
+        return ResponseEntity.ok().body(new AppResponse<>(200, "Count active account successfully ", accountActive));
     }
 
     @GetMapping("/count-login")
     public ResponseEntity<AppResponse<Long>> countLoginAccounts(
             @RequestParam("login") Boolean login) {
         Long accountLogin = accountService.countAccountLogin(login);
-        return ResponseEntity.ok().body(new AppResponse<>(200, "Count login account", accountLogin));
+        return ResponseEntity.ok().body(new AppResponse<>(200, "Count login account successfully", accountLogin));
     }
 
     @GetMapping("/count-by-role")
@@ -98,7 +109,26 @@ public class AccountController {
             @RequestParam(name = "name", required = true) String roleName) {
 
         Long accountByRole = accountService.countAccountByRoleName(RoleName.valueOf(roleName));
-        return ResponseEntity.ok().body(new AppResponse<>(200, "Count by role", accountByRole));
+        return ResponseEntity.ok().body(new AppResponse<>(200, "Count by role successfully", accountByRole));
     }
+
+    @PatchMapping("/soft-delete/{accountId}")
+    public ResponseEntity<AppResponse<Void>> softDeleteAccount(@PathVariable Long accountId) {
+        accountService.softDelete(accountId);
+        return ResponseEntity.ok().body(new AppResponse<>(200, "Soft delete account successfully"));
+    }
+
+    @PatchMapping("/restore/{accountId}")
+    public ResponseEntity<AppResponse<Void>> restoreAccount(@PathVariable Long accountId) {
+        accountService.restore(accountId);
+        return ResponseEntity.ok().body(new AppResponse<>(200, "Restore account successfully"));
+    }
+
+    @GetMapping("/soft-delete/list")
+    public ResponseEntity<AppResponse<List<AccountResponse>>> getSoftDeleteAccounts() {
+        List<AccountResponse> accountResponses = accountService.sortDeleteAccounts();
+        return ResponseEntity.ok().body(new AppResponse<>(200, "Get soft delete accounts", accountResponses));
+    }
+
 
 }

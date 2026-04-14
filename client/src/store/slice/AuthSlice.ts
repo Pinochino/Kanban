@@ -48,7 +48,7 @@ const authSlice = createGenericSlice({
                 state.register.status = "pending";
             })
             .addCase(authService.register.fulfilled, (state, action) => {
-                state.login.status = "succeeded";
+                state.register.status = "succeeded";
                 state.register.data = action.payload;
             })
             .addCase(authService.register.rejected, (state, action) => {
@@ -62,6 +62,7 @@ const authSlice = createGenericSlice({
             .addCase(authService.logout.fulfilled, (state, action) => {
                 state.logout.status = "succeeded";
                 state.login.data = null;
+                state.register.data = null;
             })
             .addCase(authService.logout.rejected, (state, action) => {
                 state.logout.status = "failed";

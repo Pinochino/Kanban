@@ -49,6 +49,10 @@ public class Account extends AbstractEntity implements Serializable {
     @JsonProperty("is_active")
     boolean isActive = Boolean.TRUE;
 
+    @Builder.Default
+    @JsonProperty("is_active")
+    boolean isDeleted = Boolean.FALSE;
+
     @ManyToMany
     @JoinTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "role_id"))
     @JsonManagedReference

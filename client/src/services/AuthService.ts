@@ -38,13 +38,15 @@ const authService = {
           url: apiName.auth.register,
           method: "POST",
           data,
+          withCredentials: true,
         });
 
         if (res.status < 200 || res.status >= 300) {
           return rejectWithValue(res.statusText);
         }
 
-        return res.data;
+
+        return res.data?.data?.account;
       } catch (error: unknown) {
         if (error instanceof Error) {
           return rejectWithValue(error.message);

@@ -30,13 +30,15 @@ export default function Auth() {
   const {
     data: userLogin,
     error,
-    status,
+    status: loginStatus,
   } = useAppSelector((state: RootState) => state.auth.login);
-  const { data: userRegister } = useAppSelector(
-    (state: RootState) => state.auth.register,
-  );
 
-  if (status === "pending")
+  const { data: userRegister,
+    status: registerStatus, } = useAppSelector(
+      (state: RootState) => state.auth.register,
+    );
+
+  if (loginStatus === "pending" || registerStatus === "pending")
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
@@ -47,12 +49,14 @@ export default function Auth() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const payload = {
+    const loginPaylog = {
       email: loginEmail,
       password: loginPassword,
     };
     try {
-      await dispatch(authService.login({ ...payload })).unwrap();
+
+      await dispatch(authService.login({ ...loginPaylog })).unwrap();
+
       navigate("/");
       toast.success("Đăng nhập thành công!");
     } catch (err: any) {
@@ -66,12 +70,15 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
     const payload = {
+      username: registerName,
       email: registerEmail,
       password: registerPassword,
     };
     try {
       await dispatch(authService.register({ ...payload })).unwrap();
-      toast.success("Đăng kí thành công! Vui lòng đăng nhập.");
+      navigate("/")
+      toast.success("Đăng kí thành công!");
+
     } catch (err: any) {
       toast.error(err);
     } finally {

@@ -1,6 +1,7 @@
 package com.example.trello.service.account;
 
 import com.example.trello.constants.RoleName;
+import com.example.trello.dto.request.UpdateAccountRequest;
 import com.example.trello.dto.response.AccountResponse;
 import com.example.trello.model.Account;
 import com.example.trello.specifications.filter.AccountFilter;
@@ -29,4 +30,12 @@ public interface AccountService {
     Long countAccountLogin(boolean login);
 
     Long countAccountByRoleName(RoleName roleName);
+
+    void softDelete(Long id);
+
+    void restore(Long id);
+
+    List<AccountResponse> sortDeleteAccounts();
+
+    AccountResponse updateAccount(Long accountId, UpdateAccountRequest request);
 }

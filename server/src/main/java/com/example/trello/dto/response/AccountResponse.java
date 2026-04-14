@@ -24,6 +24,8 @@ public class AccountResponse {
 
     boolean isActive;
 
+    boolean isDeleted;
+
     Set<RoleResponse> roles = new HashSet<>();
 
     LocalDateTime createdAt;

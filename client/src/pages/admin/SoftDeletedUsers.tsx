@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
+import { apiName } from "@/api/apiName";
+import { useGetAllData } from "@/hooks/useGetAllData";
 
 const getRoleLabel = (role: string) => {
   switch (role) {
@@ -37,31 +39,23 @@ const getInitials = (name: string | null | undefined) => {
 export default function SoftDeletedUsers() {
   const queryClient = useQueryClient();
 
-  const { data: users, isLoading } = useQuery({
-    queryKey: ["soft-deleted-users"],
-    queryFn: async () => {
-      const res = await handleApi({
-        url: "/accounts/list?active=false&page=0&size=100&ascending=false&sort=id",
-        method: "GET",
-        withCredentials: true,
-      });
-      return res.data.data as IUser[];
-    },
-  });
+  const { data: users, isLoading } = useGetAllData({ url: `${apiName.accounts.listSoftDelete}` })
+
+  console.log(users)
 
   const restoreUser = useMutation({
     mutationFn: async (userId: string | number) => {
       const res = await handleApi({
-        url: `/accounts/update-active/${userId}?active=true`,
+        url: `/accounts/restore/${userId}`,
         method: "PATCH",
         withCredentials: true,
       });
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["soft-deleted-users"] });
-      queryClient.invalidateQueries({ queryKey: ["users"] });
-      queryClient.invalidateQueries({ queryKey: ["userActiveNum"] });
+      queryClient.invalidateQueries({ queryKey: [`${apiName.accounts.listSoftDelete}`] });
+      queryClient.invalidateQueries({ queryKey: [`${apiName.accounts.list}`] });
+      // queryClient.invalidateQueries({ queryKey: ["userActiveNum"] });
       toast.success("Đã restore người dùng.");
     },
     onError: (err: Error) => toast.error(err.message),
@@ -97,7 +91,7 @@ export default function SoftDeletedUsers() {
           <CardDescription>Nhấn restore để mở lại tài khoản và đưa về trang quản trị user.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-hidden rounded-lg border">
+          <div className="hidden overflow-x-auto rounded-lg border md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -163,6 +157,56 @@ export default function SoftDeletedUsers() {
                 )}
               </TableBody>
             </Table>
+          </div>
+
+          <div className="space-y-3 md:hidden">
+            {isLoading ? (
+              <div className="rounded-lg border p-5 text-center text-sm text-muted-foreground">
+                Đang tải danh sách user đã xóa mềm...
+              </div>
+            ) : !Array.isArray(users) || users.length === 0 ? (
+              <div className="rounded-lg border p-5 text-center text-sm text-muted-foreground">
+                Chưa có user nào trong kho xóa mềm.
+              </div>
+            ) : (
+              users.map((user) => (
+                <div key={user.id} className="space-y-3 rounded-lg border p-4">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-10 w-10 border">
+                      <AvatarFallback>{getInitials(user.username)}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium">{user.username || "Chưa cập nhật tên"}</p>
+                      <p className="text-xs text-muted-foreground">ID: {user.id}</p>
+                    </div>
+                  </div>
+
+                  <p className="text-sm text-muted-foreground">{user.email || "-"}</p>
+
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {user.roles.map((r: IRole) => (
+                      <Badge key={r.id} variant="secondary">
+                        {getRoleLabel(r.name)}
+                      </Badge>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(user.createdAt).toLocaleDateString("vi-VN")}
+                    </p>
+                    <Button
+                      onClick={() => restoreUser.mutate(user.id || "")}
+                      disabled={restoreUser.isPending}
+                      className="bg-emerald-600 hover:bg-emerald-700"
+                    >
+                      <RotateCcw className="mr-1 h-4 w-4" />
+                      Restore
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
 
           <div className="mt-4 flex justify-end">

@@ -28,7 +28,7 @@ public class Role extends AbstractEntity implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Long roleId;
+    Long id;
 
     @Enumerated(EnumType.STRING)
     RoleName name;

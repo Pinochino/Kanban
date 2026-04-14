@@ -9,15 +9,15 @@ interface IAuthProvider {
 }
 
 export const AuthProvider = ({ children }: IAuthProvider) => {
-    const { data: userLogin, status } = useAppSelector((state: RootState) => state.auth.login)
+    const { data: userLogin, status: statusLogin } = useAppSelector((state: RootState) => state.auth.login)
+    const { data: userRegister, status: statusRegister } = useAppSelector((state: RootState) => state.auth.register)
 
-    if (status === "pending") return <div>Loading...</div>;
+    if (statusLogin === "pending" || statusRegister === "pending") return <div>Loading...</div>;
 
-    console.log("user_login: ", userLogin?.roles[0].name)
-
+    console.log("user_register: ", userRegister)
     
 
-    return userLogin == null ? (
+    return userLogin === null && userRegister === null ? (
         <Navigate to={"/auth"} replace />
     ) : (
         <div>{children}</div>

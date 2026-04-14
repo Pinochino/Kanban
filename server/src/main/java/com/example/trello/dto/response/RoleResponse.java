@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class RoleResponse {
 
-    Long roleId;
+    Long id;
 
     String name;
 

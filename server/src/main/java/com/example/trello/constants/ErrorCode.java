@@ -49,6 +49,10 @@ public enum ErrorCode {
     LABEL_ALREADY_EXIST(120, "Label already exist", HttpStatus.CONFLICT),
 
 
+    //    ROLE
+    ROLE_NOT_FOUND(121, "Role Not Found", HttpStatus.NOT_FOUND),
+    ROLE_ALREADY_EXISTED(122, "Role already existed", HttpStatus.CONFLICT),
+
     ;
 
     int code;

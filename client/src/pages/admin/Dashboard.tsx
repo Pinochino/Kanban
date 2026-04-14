@@ -58,7 +58,7 @@ export default function AdminDashboard() {
 
   const statCards = [
     { title: "Tổng người dùng", value: stats?.totalUsers ?? 0, icon: Users, color: "text-primary" },
-    { title: "Boards hoạt động", value: stats?.activeBoards ?? 0, icon: Kanban, color: "text-[hsl(var(--success))]" },
+    { title: "Projects hoạt động", value: stats?.activeBoards ?? 0, icon: Kanban, color: "text-[hsl(var(--success))]" },
     { title: "Tổng tasks", value: stats?.totalCards ?? 0, icon: CheckSquare, color: "text-[hsl(var(--warning))]" },
     { title: "Active (7 ngày)", value: stats?.totalUsers ?? 0, icon: Activity, color: "text-[hsl(var(--info))]" },
   ];

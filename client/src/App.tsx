@@ -4,18 +4,18 @@ import {Toaster as Sonner} from "@/components/ui/sonner";
 import {Toaster} from "@/components/ui/toaster";
 import {TooltipProvider} from "@/components/ui/tooltip";
 import {ProtectedRoute, AdminRoute} from "@/components/ProtectedRoute";
-import Boards from "./pages/Boards";
-import BoardView from "./pages/BoardView";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import AdminLayout from "./layouts/AdminLayout";
 import AdminDashboard from "./pages/admin/Dashboard";
 import UserManagement from "./pages/admin/UserManagement";
+import SoftDeletedUsers from "./pages/admin/SoftDeletedUsers";
 import Moderation from "./pages/admin/Moderation";
 import NotificationControl from "./pages/admin/NotificationControl";
 import GlobalProvider from "./hooks/providers/GlobalProvider";
 import {AuthProvider} from "./hooks/providers/AuthProvider";
 import ProjectManagement from "./pages/admin/ProjectManagement";
+import TaskManagement from "./pages/admin/TaskManagement";
 
 const queryClient = new QueryClient();
 
@@ -52,7 +52,9 @@ const App = () => (
                                         >
                                             <Route index element={<AdminDashboard/>}/>
                                             <Route path="users" element={<UserManagement/>}/>
+                                            <Route path="users/deleted" element={<SoftDeletedUsers/>}/>
                                             <Route path="projects" element={<ProjectManagement/>}/>
+                                            <Route path="tasks" element={<TaskManagement/>}/>
                                             <Route path="moderation" element={<Moderation/>}/>
                                             <Route path="notifications" element={<NotificationControl/>}/>
                                         </Route>

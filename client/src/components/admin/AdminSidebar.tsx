@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Kanban, Shield, Settings, Bell, LogOut, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Users, Kanban, Shield, Bell, LogOut, ListChecks } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 // import { useAuth } from "@/hooks/useAuth";
@@ -27,6 +27,7 @@ const menuItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Người dùng", url: "/users", icon: Users },
   { title: "Projects", url: "/projects", icon: Kanban },
+  { title: "Tasks", url: "/tasks", icon: ListChecks },
   { title: "Kiểm duyệt", url: "/moderation", icon: Shield },
   { title: "Thông báo", url: "/notifications", icon: Bell },
 ];

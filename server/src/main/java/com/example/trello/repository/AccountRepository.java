@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -24,4 +25,7 @@ public interface AccountRepository extends JpaRepository<Account, Long>, JpaSpec
     @Query("select count(acc) from Account acc where acc.isLogin = ?1")
     Long countAccountByLogin(Boolean login);
 
+
+    @Query("select acc from Account acc where acc.isDeleted = ?1")
+    List<Account> findAccountsByDeleted(boolean deleted);
 }
