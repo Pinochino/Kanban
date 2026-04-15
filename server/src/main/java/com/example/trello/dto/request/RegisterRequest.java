@@ -23,7 +23,7 @@ public class RegisterRequest {
     String email;
 
     @NotBlank(message = "PASSWORD_IS_MANDATORY")
-    @Size(min = 4, max = 6, message = "INVALID_PASSWORD")
+    @Size(min = 6, message = "INVALID_PASSWORD")
     String password;
 
 }

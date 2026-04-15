@@ -1,6 +1,6 @@
 let accessToken: string | null = null;
 
-const setAccessToken = (token: string) => {
+const setAccessToken = (token: string | null) => {
     accessToken = token;
 }
 

@@ -22,6 +22,7 @@ import { apiName } from "@/api/apiName";
 
 const UserStatistics = ({ userList }: { userList: IUser[] }) => {
 
+  const { data: totalUserNum } = useGetAllData({ url: `${apiName.accounts.count}` })
   const { data: userLoginNum } = useGetAllData({ url: `${apiName.accounts.loginNums}?login=true` })
   const { data: userActiveNum } = useGetAllData({ url: `${apiName.accounts.activeNums}?active=false` })
   const { data: userAdminNum } = useGetAllData({ url: `${apiName.accounts.countByRole}?name=SUPER_ADMIN` })
@@ -71,7 +72,7 @@ const UserStatistics = ({ userList }: { userList: IUser[] }) => {
           <CardHeader className="pb-2">
             <CardDescription>Tổng người dùng</CardDescription>
             <CardTitle className="text-2xl">
-              {Array.isArray(userList) && Array.from(userList).length}
+              {totalUserNum ?? 0}
             </CardTitle>
           </CardHeader>
           <CardContent>

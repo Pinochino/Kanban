@@ -212,7 +212,7 @@ export default function SoftDeletedUsers() {
           <div className="mt-4 flex justify-end">
             <Button
               variant="outline"
-              onClick={() => queryClient.invalidateQueries({ queryKey: ["soft-deleted-users"] })}
+              onClick={() => queryClient.invalidateQueries({ queryKey: [`${apiName.accounts.listSoftDelete}`] })}
             >
               <RefreshCw className="mr-1 h-4 w-4" />
               Tải lại

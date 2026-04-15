@@ -73,6 +73,7 @@ public class AuthServiceImpl implements AuthService {
 
         Account newAccount = accountMapper.toUser(request);
         newAccount.setPassword(passwordEncoder.encode(request.getPassword()));
+        newAccount.setLogin(true);
         newAccount.addRole(role.get());
 
         accountRepository.save(newAccount);
@@ -126,6 +127,9 @@ public class AuthServiceImpl implements AuthService {
         if (accountLogin == null) {
             throw new AppError(ErrorCode.INVALID_CREDENTIALS);
         }
+
+        accountLogin.setLogin(true);
+        accountLogin = accountRepository.save(accountLogin);
 
 
         AccountResponse accountResponse = accountMapper.toResponse(accountLogin);

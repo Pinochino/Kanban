@@ -120,7 +120,6 @@ const TaskList = ({
         return acc;
       },
       {
-        backlog: [],
         todo: [],
         in_progress: [],
         review: [],

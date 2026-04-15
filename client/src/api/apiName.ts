@@ -14,7 +14,10 @@ export const apiName = {
         activeNums: "/accounts/count-active",
         loginNums: "/accounts/count-login",
         countByRole: "/accounts/count-by-role",
+        count: "/accounts/count",
         listSoftDelete: "/accounts/soft-delete/list",
+        update: '/accounts/update',
+        
         
     },
 

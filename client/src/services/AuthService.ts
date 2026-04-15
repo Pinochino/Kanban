@@ -3,6 +3,7 @@ import axiosClient from "@/api/axiosClient";
 import { handleApi } from "@/api/handleApi";
 import { createAppAsyncThunk } from "@/store/appThunk";
 import { ILogin, IRegister } from "@/types/UserInterface";
+import { setAccessToken } from "@/utils/JwtUtils";
 
 const authService = {
   login: createAppAsyncThunk(
@@ -19,6 +20,8 @@ const authService = {
         if (res.status < 200 || res.status >= 300) {
           return rejectWithValue(res.statusText);
         }
+
+        setAccessToken(res.data?.data?.accessToken ?? null);
 
         return res.data?.data?.account;
       } catch (error: unknown) {
@@ -45,6 +48,7 @@ const authService = {
           return rejectWithValue(res.statusText);
         }
 
+        setAccessToken(res.data?.data?.accessToken ?? null);
 
         return res.data?.data?.account;
       } catch (error: unknown) {
@@ -69,6 +73,8 @@ const authService = {
         if (res.status < 200 || res.status >= 300) {
           return rejectWithValue(res.statusText);
         }
+
+        setAccessToken(null);
 
         return res.data;
       } catch (error: unknown) {

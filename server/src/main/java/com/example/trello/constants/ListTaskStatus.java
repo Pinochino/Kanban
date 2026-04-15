@@ -5,5 +5,4 @@ public enum ListTaskStatus {
     IN_PROGRESS,
     REVIEW,
     DONE,
-    BLOCKED,
 }

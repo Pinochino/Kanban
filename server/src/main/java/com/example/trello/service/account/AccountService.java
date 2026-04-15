@@ -31,6 +31,8 @@ public interface AccountService {
 
     Long countAccountByRoleName(RoleName roleName);
 
+    Long countAccounts();
+
     void softDelete(Long id);
 
     void restore(Long id);

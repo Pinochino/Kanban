@@ -52,4 +52,13 @@ public class AccountSpecifications {
         });
     }
 
+    public static Specification<Account> filterByDeleted(Boolean deleted) {
+        return ((root, query, cb) -> {
+            if (deleted == null) {
+                return cb.conjunction();
+            }
+            return cb.equal(root.get("isDeleted"), deleted);
+        });
+    }
+
 }

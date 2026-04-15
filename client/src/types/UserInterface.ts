@@ -12,8 +12,16 @@ export interface IUser {
 }
 
 export interface IRole {
-    id: number;
+    id: number | string;
     name: string
+}
+
+export interface IUpdateUser {
+    userId: string | number;
+    username?: string;
+    email?: string;
+    password?: string;
+    roleId?: number | string;
 }
 
 export type ILogin = Required<Pick<IUser, "email" | "password">>

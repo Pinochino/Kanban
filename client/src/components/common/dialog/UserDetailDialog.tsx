@@ -16,7 +16,7 @@ const UserDetailDialog = ({
     setDetailUserId,
     detailLoading
 }: {
-    detailUser: IUser;
+    detailUser: IUser | any;
     getRoleLabel: (name?: string | null) => React.ReactElement;
     detailUserId: string | null;
     setDetailUserId: (userId: string) => string;

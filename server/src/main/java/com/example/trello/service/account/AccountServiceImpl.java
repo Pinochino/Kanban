@@ -24,6 +24,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -46,7 +47,8 @@ public class AccountServiceImpl implements AccountService {
                 .where(AccountSpecifications.filterByRoleId(request.getRoleId()))
                 .and(AccountSpecifications.filterByActive(request.getActive()))
                 .and(AccountSpecifications.filterByUsername(request.getUsername()))
-                .and(AccountSpecifications.filterByLogin(request.getLogin()));
+            .and(AccountSpecifications.filterByLogin(request.getLogin()))
+            .and(AccountSpecifications.filterByDeleted(false));
 
 
         Sort sort = request.isAscending() ? Sort.by(request.getSortBy()).ascending()
@@ -111,6 +113,12 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    public Long countAccounts() {
+        Specification<Account> spec = Specification.where(AccountSpecifications.filterByDeleted(false));
+        return accountRepository.count(spec);
+    }
+
+    @Override
     public void softDelete(Long id) {
         Account account = accountRepository.findById(id).orElseThrow(() -> new AppError(ErrorCode.USER_NOT_FOUND));
         account.setDeleted(true);
@@ -136,18 +144,29 @@ public class AccountServiceImpl implements AccountService {
                 .findById(accountId)
                 .orElseThrow(() -> new AppError(ErrorCode.USER_NOT_FOUND));
 
-        Role role = roleRepository.findById(request.getRoleId()).orElseThrow(() -> new AppError(ErrorCode.ROLE_NOT_FOUND));
-
-        boolean check = oldAccount.getRoles().stream().anyMatch(r -> r.getId().equals(role.getId()));
-
-        accountMapper.updateAccount(oldAccount, request);
-
-        if (!check) {
-            oldAccount.getRoles().clear();
-            oldAccount.getRoles().add(role);
+        if (StringUtils.hasText(request.getUsername())) {
+            oldAccount.setUsername(request.getUsername().trim());
         }
 
-        oldAccount.setPassword(passwordEncoder.encode(request.getPassword()));
+        if (StringUtils.hasText(request.getEmail())) {
+            oldAccount.setEmail(request.getEmail().trim());
+        }
+
+        if (request.getRoleId() != null) {
+            Role role = roleRepository.findById(request.getRoleId())
+                    .orElseThrow(() -> new AppError(ErrorCode.ROLE_NOT_FOUND));
+            boolean check = oldAccount.getRoles().stream().anyMatch(r -> r.getId().equals(role.getId()));
+
+            if (!check) {
+                oldAccount.getRoles().clear();
+                oldAccount.getRoles().add(role);
+            }
+        }
+
+        if (StringUtils.hasText(request.getPassword())) {
+            oldAccount.setPassword(passwordEncoder.encode(request.getPassword()));
+        }
+
         oldAccount = accountRepository.save(oldAccount);
 
         return accountMapper.toResponse(oldAccount);

@@ -38,7 +38,7 @@ public class AuthController {
         Cookie cookie = new Cookie("REFRESH_TOKEN", accountResponse.getRefreshToken());
         cookie.setPath("/");
         cookie.setHttpOnly(true);
-        cookie.setSecure(true);
+        cookie.setSecure(false);
         response.addCookie(cookie);
 
         accountResponse.setRefreshToken(null);
@@ -53,26 +53,28 @@ public class AuthController {
         Cookie cookie = new Cookie("REFRESH_TOKEN", accountResponse.getRefreshToken());
         cookie.setPath("/");
         cookie.setHttpOnly(true);
-        cookie.setSecure(true);
+        cookie.setSecure(false);
         response.addCookie(cookie);
+        accountResponse.setRefreshToken(null);
         return ResponseEntity.ok().body(new AppResponse<>(200, "Register Successful", accountResponse));
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<AppResponse<Void>> logout(@RequestHeader("Authorization") String authHeader,
-                                                    @CookieValue("REFRESH_TOKEN") String refreshToken,
+    public ResponseEntity<AppResponse<Void>> logout(@RequestHeader(value = "Authorization", required = false) String authHeader,
+                                                    @CookieValue(value = "REFRESH_TOKEN", required = false) String refreshToken,
                                                     HttpServletResponse response
 
     ) {
-        String accessToken = authHeader.replace("Bearer ", "");
-
-        authService.logout(accessToken, refreshToken);
+        if (authHeader != null && authHeader.startsWith("Bearer ") && refreshToken != null && !refreshToken.isBlank()) {
+            String accessToken = authHeader.replace("Bearer ", "");
+            authService.logout(accessToken, refreshToken);
+        }
 
         Cookie cookie = new Cookie("REFRESH_TOKEN", null);
         cookie.setPath("/");
         cookie.setHttpOnly(true);
         cookie.setMaxAge(0);
-        cookie.setSecure(true);
+        cookie.setSecure(false);
 
         response.addCookie(cookie);
 
@@ -80,7 +82,10 @@ public class AuthController {
     }
 
     @PostMapping("/refresh-token")
-    public ResponseEntity<AppResponse<String>> refreshToken(@CookieValue("REFRESH_TOKEN") String refreshToken) {
+    public ResponseEntity<AppResponse<String>> refreshToken(@CookieValue(value = "REFRESH_TOKEN", required = false) String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            return ResponseEntity.badRequest().body(new AppResponse<>(400, "Refresh token is required"));
+        }
         String newAccessToken = authService.refreshToken(refreshToken);
         return ResponseEntity.ok().body(new AppResponse<>(200, "Refresh Token Successful", newAccessToken));
     }

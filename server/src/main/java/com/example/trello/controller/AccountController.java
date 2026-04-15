@@ -112,6 +112,12 @@ public class AccountController {
         return ResponseEntity.ok().body(new AppResponse<>(200, "Count by role successfully", accountByRole));
     }
 
+    @GetMapping("/count")
+    public ResponseEntity<AppResponse<Long>> countAccounts() {
+        Long accountCount = accountService.countAccounts();
+        return ResponseEntity.ok().body(new AppResponse<>(200, "Count account successfully", accountCount));
+    }
+
     @PatchMapping("/soft-delete/{accountId}")
     public ResponseEntity<AppResponse<Void>> softDeleteAccount(@PathVariable Long accountId) {
         accountService.softDelete(accountId);
