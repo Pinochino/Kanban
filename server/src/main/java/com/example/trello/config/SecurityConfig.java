@@ -36,6 +36,7 @@ public class SecurityConfig {
 
     String[] WHITE_LIST = {
             "/auth/**",
+            "/files/**",
     };
     String[] ADMIN_LIST = {
             "/projects/create",
