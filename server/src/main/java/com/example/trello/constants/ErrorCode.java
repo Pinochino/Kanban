@@ -39,6 +39,7 @@ public enum ErrorCode {
     // TASK
     TASK_NOT_FOUND(116, "Task Not Found", HttpStatus.NOT_FOUND),
     TASK_ALREADY_EXIST(117, "Task already exist", HttpStatus.CONFLICT),
+    TASK_AUTHORIZED(123, "You don't have permission to update this task", HttpStatus.FORBIDDEN),
 
 
     //    LIST_TASK

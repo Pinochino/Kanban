@@ -1,5 +1,6 @@
 package com.example.trello.dto.response;
 
+import com.example.trello.constants.ListTaskStatus;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -21,6 +22,14 @@ public class TaskResponse {
     String description;
 
     Long orderIndex;
+
+    Long projectId;
+
+    Long listTaskId;
+
+    ListTaskStatus listTaskStatus;
+
+    AccountAssignedProjectResponse assignedAccount;
 
     boolean isActive;
 

@@ -1,9 +1,10 @@
-package com.example.trello.dto.response;
+package com.example.trello.dto.request;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.FieldDefaults;
 
@@ -12,9 +13,8 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @NoArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class AccountAssignedProjectResponse {
-
-    Long id;
-
-    String username;
+@Builder
+public class CommentRequest {
+    Long taskId;
+    String comment;
 }

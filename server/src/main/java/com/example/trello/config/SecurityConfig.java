@@ -12,10 +12,11 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -37,9 +38,14 @@ public class SecurityConfig {
             "/auth/**",
     };
     String[] ADMIN_LIST = {
-            "/projects/**",
+            "/projects/create",
+            "/projects/delete/**",
+            "/projects/delete-all",
             "/accounts/**",
-            "/tasks/**",
+            "/tasks/create",
+            "/tasks/update/**",
+            "/tasks/delete/**",
+            "/tasks/delete-all",
     };
 
     CustomAccessDeniedHandler accessDeniedHandler;
@@ -61,8 +67,10 @@ public class SecurityConfig {
     public SecurityFilterChain configure(HttpSecurity http) throws Exception {
         return http
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(ADMIN_LIST).hasRole(RoleName.SUPER_ADMIN.name())
                         .requestMatchers(WHITE_LIST).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/projects/list", "/projects/detail/**", "/tasks/list", "/tasks/detail/**").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/tasks/update-status/**").authenticated()
+                        .requestMatchers(ADMIN_LIST).hasRole(RoleName.SUPER_ADMIN.name())
                         .anyRequest().authenticated()
                 )
                 .csrf(AbstractHttpConfigurer::disable)

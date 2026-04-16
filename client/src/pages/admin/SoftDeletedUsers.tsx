@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { ArrowLeft, RefreshCw, RotateCcw } from "lucide-react";
+import { ArrowLeft, RefreshCw, RotateCcw, Trash } from "lucide-react";
 import { handleApi } from "@/api/handleApi";
 import { IRole, IUser } from "@/types/UserInterface";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { apiName } from "@/api/apiName";
 import { useGetAllData } from "@/hooks/useGetAllData";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 const getRoleLabel = (role: string) => {
   switch (role) {
@@ -61,6 +62,25 @@ export default function SoftDeletedUsers() {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  const deleteUserPermanent = useMutation({
+    mutationFn: async (userId: string | number) => {
+      const res = await handleApi({
+        url: `/accounts/delete/${userId}`,
+        method: "DELETE",
+        withCredentials: true,
+      });
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`${apiName.accounts.listSoftDelete}`] });
+      queryClient.invalidateQueries({ queryKey: [`${apiName.accounts.list}`] });
+      // queryClient.invalidateQueries({ queryKey: ["userActiveNum"] });
+      toast.success("Đã restore người dùng.");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+
   return (
     <div className="space-y-6">
       <Card className="border-0 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 text-white shadow-xl">
@@ -99,7 +119,7 @@ export default function SoftDeletedUsers() {
                   <TableHead>Email</TableHead>
                   <TableHead>Vai trò</TableHead>
                   <TableHead>Ngày tạo</TableHead>
-                  <TableHead className="text-right">Restore</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -142,15 +162,48 @@ export default function SoftDeletedUsers() {
                       <TableCell className="text-sm text-muted-foreground">
                         {new Date(user.createdAt).toLocaleDateString("vi-VN")}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right space-x-2">
                         <Button
                           onClick={() => restoreUser.mutate(user.id || "")}
                           disabled={restoreUser.isPending}
                           className="bg-emerald-600 hover:bg-emerald-700"
+                          size="icon"
                         >
-                          <RotateCcw className="mr-1 h-4 w-4" />
-                          Restore
+                          <RotateCcw />
                         </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              className="bg-red-400"
+                              size="icon"
+                            >
+                              <Trash />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete your account
+                                from our servers.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction>
+                                <Button
+                                  onClick={() => deleteUserPermanent.mutate(user.id || "")}
+                                  disabled={deleteUserPermanent.isPending}
+                                  className="bg-red-400"
+                                  size="icon"
+                                >
+                                  Delete Permanent
+                                </Button>
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+
                       </TableCell>
                     </TableRow>
                   ))
@@ -203,6 +256,7 @@ export default function SoftDeletedUsers() {
                       <RotateCcw className="mr-1 h-4 w-4" />
                       Restore
                     </Button>
+
                   </div>
                 </div>
               ))

@@ -1,75 +1,364 @@
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { useEffect, useMemo, useState } from "react";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  pointerWithin,
+  useDroppable,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { cn } from "@/lib/utils";
-import {
-  calcTaskCompletion,
-  formatDate,
-  initials,
-  priorityMeta,
-  statusMeta,
-  statusOrder,
-  Task,
-  TaskStatus,
-} from "@/pages/admin/ProjectManagement";
-import { IProject } from "@/types/ProjectInterface";
-import { AvatarImage } from "@radix-ui/react-avatar";
-import {
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@radix-ui/react-dropdown-menu";
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   CheckCircle2,
   Clock3,
   Grid2x2,
+  GripVertical,
   Kanban,
   LayoutList,
   MessageSquare,
-  MoreHorizontal,
   Paperclip,
   Plus,
   Search,
-  Target,
 } from "lucide-react";
-import React, { useMemo, useState } from "react";
+import { toast } from "sonner";
+
+import { apiName } from "@/api/apiName";
+import { handleApi } from "@/api/handleApi";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { AvatarImage } from "@radix-ui/react-avatar";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import CreateTaskDialog from "@/components/common/dialog/CreateTaskDialog";
+import TaskDetailDialog from "@/components/common/dialog/TaskDetailDialog";
+import { defaultNewTask, formatDate, initials, priorityMeta, statusMeta, statusOrder, Task, TaskStatus } from "@/domains/projects/taskBoard";
+import { ICreateTask } from "@/types/TaskInterface";
+import { IProject, IListTask, ITask } from "@/types/ProjectInterface";
+import { FormEvent } from "react";
+
+interface TaskListProps {
+  projectList: IProject[];
+  selectedProjectId?: string | number | null;
+  tasks?: Task[];
+  currentUserId?: string | number | null;
+  canManageTasks?: boolean;
+  allowTaskDrag?: boolean;
+}
+
+const normalizeStatus = (status?: string | null): TaskStatus => {
+  const normalized = (status ?? "").toLowerCase();
+
+  if (normalized === "to_do") return "todo";
+  if (normalized === "in_progress") return "in_progress";
+  if (normalized === "review") return "review";
+  if (normalized === "done") return "done";
+  if (normalized === "todo" || normalized === "backlog") return "todo";
+
+  return "todo";
+};
+
+const parseDueDate = (value?: string) => {
+  if (!value) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  const parsed = new Date(value).getTime();
+  return Number.isNaN(parsed) ? Number.POSITIVE_INFINITY : parsed;
+};
+
+const toApiDateTime = (value?: string) => {
+  if (!value) {
+    return "";
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  if (trimmed.length === 10) {
+    return `${trimmed}T00:00:00`;
+  }
+
+  if (trimmed.includes(" ") && !trimmed.includes("T")) {
+    return trimmed.replace(" ", "T");
+  }
+
+  return trimmed;
+};
+
+const buildTaskFromApi = (
+  task: ITask,
+  projectId: string | number,
+  listStatus?: string | null,
+  parentListTaskId?: string | number,
+): Task => ({
+  id: String(task.id),
+  projectId: String(projectId),
+  listTaskId: task.listTaskId ? String(task.listTaskId) : parentListTaskId ? String(parentListTaskId) : undefined,
+  orderIndex: typeof task.orderIndex === "number" ? task.orderIndex : undefined,
+  assignedAccountId: task.assignedAccount?.id ? String(task.assignedAccount.id) : undefined,
+  title: task.title,
+  description: task.description ?? "",
+  status: normalizeStatus(listStatus ?? task.listTaskStatus),
+  priority: "medium",
+  assignee: task.assignedAccount?.username ?? "Unassigned",
+  dueDate: task.dueDate ?? "",
+  reminderDate: task.reminderDate ?? "",
+  checklistDone: 0,
+  checklistTotal: 0,
+  comments: 0,
+  attachments: 0,
+  tags: [],
+});
+
+const sortTasks = (items: Task[]) =>
+  [...items].sort((left, right) => {
+    const leftOrderIndex = left.orderIndex ?? Number.POSITIVE_INFINITY;
+    const rightOrderIndex = right.orderIndex ?? Number.POSITIVE_INFINITY;
+
+    if (leftOrderIndex !== rightOrderIndex) {
+      return leftOrderIndex - rightOrderIndex;
+    }
+
+    const dueDateDifference = parseDueDate(left.dueDate) - parseDueDate(right.dueDate);
+
+    if (dueDateDifference !== 0) {
+      return dueDateDifference;
+    }
+
+    const leftId = Number(left.id);
+    const rightId = Number(right.id);
+
+    if (!Number.isNaN(leftId) && !Number.isNaN(rightId)) {
+      return leftId - rightId;
+    }
+
+    return left.id.localeCompare(right.id);
+  });
+
+  const buildTaskUpdatePayload = (task: Task, listTaskId: string, orderIndex: number) => ({
+    title: task.title,
+    description: task.description,
+    assignedAccountId: Number(task.assignedAccountId ?? 0),
+    listTaskId: Number(listTaskId),
+    dueDate: toApiDateTime(task.dueDate),
+    reminderDate: toApiDateTime(task.reminderDate),
+    orderIndex,
+  });
+
+const TaskBoardCard = ({
+  task,
+  onOpenDetail,
+  canDrag,
+}: {
+  task: Task;
+  onOpenDetail: (task: Task) => void;
+  canDrag: boolean;
+}) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: task.id,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.65 : 1,
+  };
+
+  return (
+    <Card
+      ref={setNodeRef}
+      style={style}
+      className="w-full min-w-0 cursor-grab border bg-white/95 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing"
+      {...(canDrag ? { ...attributes, ...listeners } : {})}
+      onClick={() => onOpenDetail(task)}
+    >
+      <CardContent className="space-y-3 p-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 space-y-1">
+            <p className="line-clamp-2 font-medium">{task.title}</p>
+            <p className="truncate text-xs text-muted-foreground">{task.id}</p>
+          </div>
+          <Badge variant="outline" className={priorityMeta[task.priority].badgeClass}>
+            {priorityMeta[task.priority].label}
+          </Badge>
+        </div>
+
+        <div className="flex justify-end">
+          {canDrag ? (
+            <button
+              type="button"
+              className="inline-flex h-6 w-6 items-center justify-center rounded border bg-white text-slate-500 hover:bg-slate-50"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <GripVertical className="h-3.5 w-3.5" />
+            </button>
+          ) : null}
+        </div>
+
+        <div className="flex flex-wrap gap-1">
+          {task.tags.length > 0 ? (
+            task.tags.map((tag) => (
+              <Badge key={tag} variant="secondary" className="text-[10px]">
+                {tag}
+              </Badge>
+            ))
+          ) : (
+            <Badge variant="secondary" className="text-[10px]">
+              No tags
+            </Badge>
+          )}
+        </div>
+
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1">
+              <LayoutList className="h-3.5 w-3.5" />
+              Checklist
+            </span>
+            <span>
+              {task.checklistDone}/{task.checklistTotal}
+            </span>
+          </div>
+          <div className="h-1.5 rounded-full bg-muted">
+            <div
+              className="h-1.5 rounded-full bg-primary"
+              style={{
+                width:
+                  task.checklistTotal > 0
+                    ? `${Math.round((task.checklistDone / task.checklistTotal) * 100)}%`
+                    : task.status === "done"
+                      ? "100%"
+                      : "0%",
+              }}
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1">
+            <Clock3 className="h-3.5 w-3.5" />
+            {formatDate(task.dueDate)}
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <span className="inline-flex items-center gap-1">
+              <MessageSquare className="h-3.5 w-3.5" />
+              {task.comments}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <Paperclip className="h-3.5 w-3.5" />
+              {task.attachments}
+            </span>
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between border-t pt-2">
+          <div className="flex items-center gap-2">
+            <Avatar className="h-7 w-7">
+              <AvatarImage src={task.assigneeAvatar} alt={task.assignee} />
+              <AvatarFallback className="text-[11px]">{initials(task.assignee)}</AvatarFallback>
+            </Avatar>
+            <span className="text-xs font-medium">{task.assignee}</span>
+          </div>
+
+          {task.status === "done" ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : null}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+const TaskBoardColumn = ({
+  status,
+  title,
+  tasks,
+  onAddTask,
+  onOpenTaskDetail,
+  canManageTasks,
+  canDragTasks,
+}: {
+  status: TaskStatus;
+  title: string;
+  tasks: Task[];
+  onAddTask: () => void;
+  onOpenTaskDetail: (task: Task) => void;
+  canManageTasks: boolean;
+  canDragTasks: boolean;
+}) => {
+  const { setNodeRef } = useDroppable({ id: status });
+
+  return (
+    <Card
+      className={cn(
+        "w-full min-w-0 border-2 shadow-sm transition-all duration-200 xl:min-w-[260px]",
+        statusMeta[status].columnClass,
+      )}
+    >
+      <CardHeader className="space-y-3 pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base">{title}</CardTitle>
+          <Badge variant="secondary">{tasks.length}</Badge>
+        </div>
+        {canManageTasks ? (
+          <Button variant="outline" size="sm" className="w-full justify-start" onClick={onAddTask}>
+            <Plus className="h-4 w-4" />
+            Thêm task vào {title}
+          </Button>
+        ) : null}
+      </CardHeader>
+      <CardContent ref={setNodeRef} className="space-y-3 p-3">
+        <SortableContext items={tasks.map((task) => task.id)} strategy={verticalListSortingStrategy}>
+          {tasks.map((task) => (
+              <TaskBoardCard key={task.id} task={task} onOpenDetail={onOpenTaskDetail} canDrag={canDragTasks} />
+          ))}
+        </SortableContext>
+
+        {tasks.length === 0 ? (
+          <div className="rounded-md border border-dashed bg-white/70 p-4 text-center text-sm text-muted-foreground">
+            Không có task trong cột này.
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+};
 
 const TaskList = ({
   projectList,
   selectedProjectId,
   tasks,
-  onCreateTask,
-}: {
-  projectList: IProject[];
-  selectedProjectId?: string | number | null;
-  tasks: Task[];
-  onCreateTask?: () => void;
-}) => {
+  currentUserId,
+  canManageTasks = true,
+  allowTaskDrag,
+}: TaskListProps) => {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState<string>("");
   const [viewMode, setViewMode] = useState<"table" | "kanban">("kanban");
   const [statusFilter, setStatusFilter] = useState<"all" | TaskStatus>("all");
   const [projectFilter, setProjectFilter] = useState<string>("all");
+  const [isCreateTaskDialogOpen, setIsCreateTaskDialogOpen] = useState(false);
+  const [createTaskProjectId, setCreateTaskProjectId] = useState<string>("");
+  const [createTaskListTaskId, setCreateTaskListTaskId] = useState<string>("");
+  const [createTaskColumnLabel, setCreateTaskColumnLabel] = useState<string>("");
+  const [taskForm, setTaskForm] = useState<ICreateTask>(defaultNewTask);
+  const [boardTasks, setBoardTasks] = useState<Task[]>([]);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+
+  const sensor = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 3 } }));
+  const canDragTasks = allowTaskDrag ?? canManageTasks;
 
   const projectMap = useMemo(
     () =>
@@ -83,20 +372,35 @@ const TaskList = ({
     [projectList],
   );
 
-  const selectedProject = selectedProjectId
-    ? projectMap[String(selectedProjectId)]
-    : null;
+  const selectedProject = selectedProjectId ? projectMap[String(selectedProjectId)] : null;
+  const boardProject = selectedProject ?? null;
 
-  const filteredTasks = useMemo(() => {
+  const projectTasks = useMemo(() => {
+    if (boardProject?.listTasks?.length) {
+      return sortTasks(
+        boardProject.listTasks.flatMap((listTask) =>
+          (listTask.taskList ?? []).map((task) =>
+            buildTaskFromApi(task, boardProject.id, String(listTask.status), listTask.id),
+          ),
+        ),
+      );
+    }
+
+    return tasks ? sortTasks(tasks) : [];
+  }, [boardProject, tasks]);
+
+  useEffect(() => {
+    setBoardTasks(projectTasks);
+  }, [projectTasks]);
+
+  const availableTasks = useMemo(() => {
     const keyword = search.trim().toLowerCase();
-    const effectiveProjectFilter = selectedProjectId
-      ? String(selectedProjectId)
-      : projectFilter;
+    const effectiveProjectFilter = selectedProjectId ? String(selectedProjectId) : projectFilter;
 
-    return tasks.filter((task) => {
+    return boardTasks.filter((task) => {
+      const assignedToCurrentUser = !currentUserId || String(task.assignedAccountId ?? "") === String(currentUserId);
       const isSelectedProject =
-        effectiveProjectFilter === "all" ||
-        String(task.projectId) === String(effectiveProjectFilter);
+        effectiveProjectFilter === "all" || String(task.projectId) === String(effectiveProjectFilter);
       const projectName = projectMap[String(task.projectId)]?.title ?? "";
       const matchesSearch =
         !keyword ||
@@ -105,18 +409,16 @@ const TaskList = ({
         task.description.toLowerCase().includes(keyword) ||
         task.assignee.toLowerCase().includes(keyword) ||
         projectName.toLowerCase().includes(keyword);
+      const matchesStatus = statusFilter === "all" || task.status === statusFilter;
 
-      const matchesStatus =
-        statusFilter === "all" || task.status === statusFilter;
-
-      return isSelectedProject && matchesSearch && matchesStatus;
+      return assignedToCurrentUser && isSelectedProject && matchesSearch && matchesStatus;
     });
-  }, [projectFilter, projectMap, search, selectedProjectId, statusFilter, tasks]);
+  }, [boardTasks, currentUserId, projectFilter, projectMap, search, selectedProjectId, statusFilter]);
 
   const groupedTasks = useMemo(() => {
     return statusOrder.reduce(
       (acc, status) => {
-        acc[status] = filteredTasks.filter((task) => task.status === status);
+        acc[status] = availableTasks.filter((task) => task.status === status);
         return acc;
       },
       {
@@ -126,20 +428,346 @@ const TaskList = ({
         done: [],
       } as Record<TaskStatus, Task[]>,
     );
-  }, [filteredTasks]);
+  }, [availableTasks]);
+
+  const listTasksByStatus = useMemo(() => {
+    const result = new Map<TaskStatus, IListTask | null>();
+
+    boardProject?.listTasks?.forEach((listTask) => {
+      const status = normalizeStatus(listTask.status);
+      result.set(status, listTask);
+    });
+
+    return result;
+  }, [boardProject]);
+
+  const listTaskById = useMemo(() => {
+    const result = new Map<string, IListTask>();
+
+    boardProject?.listTasks?.forEach((listTask) => {
+      result.set(String(listTask.id), listTask);
+    });
+
+    return result;
+  }, [boardProject]);
+
+  const refreshTaskBoardQueries = async () => {
+    await queryClient.invalidateQueries({ queryKey: [apiName.projects.list] });
+
+    if (selectedProjectId) {
+      await queryClient.invalidateQueries({
+        queryKey: [`${apiName.projects.detail}/${selectedProjectId}`],
+      });
+    }
+
+    await queryClient.invalidateQueries({ queryKey: [apiName.tasks.list] });
+  };
+
+  const saveTaskOrder = async (tasksToPersist: Task[]) => {
+    await Promise.all(
+      tasksToPersist.map((task, index) =>
+        handleApi({
+          url: `${apiName.tasks.update}/${task.id}`,
+          method: "PUT",
+          data: buildTaskUpdatePayload(task, task.listTaskId ?? "", index),
+          withCredentials: true,
+        }),
+      ),
+    );
+  };
+
+  const createTaskMutation = useMutation({
+    mutationFn: async (payload: ICreateTask) => {
+      return handleApi({
+        url: apiName.tasks.create,
+        method: "POST",
+        data: {
+          ...payload,
+          assignedAccountId: Number(payload.assignedAccountId),
+          listTaskId: Number(payload.listTaskId),
+          dueDate: toApiDateTime(payload.dueDate),
+          reminderDate: toApiDateTime(payload.reminderDate),
+          projectId: payload.projectId ? Number(payload.projectId) : undefined,
+        },
+        withCredentials: true,
+      });
+    },
+    onSuccess: async () => {
+      await refreshTaskBoardQueries();
+      toast.success("Đã tạo task mới");
+      setIsCreateTaskDialogOpen(false);
+      setTaskForm(defaultNewTask);
+      setCreateTaskProjectId("");
+      setCreateTaskListTaskId("");
+      setCreateTaskColumnLabel("");
+    },
+  });
+
+  const openCreateTaskDialog = (status: TaskStatus) => {
+    if (!canManageTasks) {
+      return;
+    }
+
+    if (!boardProject) {
+      return;
+    }
+
+    const listTask = listTasksByStatus.get(status);
+    if (!listTask) {
+      toast.error("Không tìm thấy cột tương ứng trong project này");
+      return;
+    }
+
+    setCreateTaskProjectId(String(boardProject.id));
+    setCreateTaskListTaskId(String(listTask.id));
+    setCreateTaskColumnLabel(statusMeta[status].label);
+    setTaskForm((prev) => ({
+      ...prev,
+      projectId: String(boardProject.id),
+      listTaskId: String(listTask.id),
+    }));
+    setIsCreateTaskDialogOpen(true);
+  };
+
+  const handleFieldChange = (field: keyof ICreateTask, value: string) => {
+    setTaskForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handleCreateTask = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!taskForm.projectId || !taskForm.listTaskId) {
+      toast.error("Thiếu project hoặc cột trạng thái");
+      return;
+    }
+
+    await createTaskMutation.mutateAsync({
+      ...taskForm,
+      projectId: taskForm.projectId,
+      listTaskId: taskForm.listTaskId,
+    });
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    if (!canDragTasks) {
+      return;
+    }
+
+    const { active, over } = event;
+
+    if (!over) {
+      return;
+    }
+
+    if (String(active.id) === String(over.id)) {
+      return;
+    }
+
+    const draggedTask = availableTasks.find((task) => task.id === String(active.id));
+    if (!draggedTask) {
+      return;
+    }
+
+    const overId = String(over.id);
+    const targetTask = boardTasks.find((task) => task.id === overId);
+    const targetStatus = (statusOrder.includes(overId as TaskStatus)
+      ? (overId as TaskStatus)
+      : targetTask?.status) as TaskStatus | undefined;
+    const targetListTask = targetStatus ? (listTasksByStatus.get(targetStatus) ?? undefined) : undefined;
+
+    if (!targetListTask) {
+      return;
+    }
+
+    const sourceStatus = draggedTask.status;
+    const nextStatus = normalizeStatus(targetListTask.status);
+
+    const previousTasks = [...boardTasks];
+    const isStatusChange = sourceStatus !== nextStatus;
+
+    if (!canManageTasks) {
+      const nextBoardTasks = boardTasks.map((task) =>
+        task.id === draggedTask.id
+          ? {
+              ...task,
+              listTaskId: String(targetListTask.id),
+              status: nextStatus,
+              orderIndex: 0,
+            }
+          : task,
+      );
+
+      setBoardTasks(sortTasks(nextBoardTasks));
+
+      void (async () => {
+        try {
+          await handleApi({
+            url: `${apiName.tasks.updateStatus}/${draggedTask.id}`,
+            method: "PATCH",
+            params: { listTaskId: String(targetListTask.id) },
+            withCredentials: true,
+          });
+
+          await refreshTaskBoardQueries();
+          toast.success("Đã cập nhật trạng thái task");
+        } catch {
+          setBoardTasks(previousTasks);
+          toast.error("Kéo thả thất bại, đã hoàn tác");
+        }
+      })();
+
+      return;
+    }
+
+    const targetListTaskId = String(targetListTask.id);
+    const sourceListTaskId = String(
+      draggedTask.listTaskId ?? listTasksByStatus.get(sourceStatus)?.id ?? targetListTask.id,
+    );
+
+    if (isStatusChange) {
+      const targetTasks = sortTasks(boardTasks.filter((task) => String(task.listTaskId ?? "") === targetListTaskId));
+      const insertAt = targetTask
+        ? Math.max(targetTasks.findIndex((task) => task.id === targetTask.id), 0)
+        : targetTasks.length;
+
+      const nextBoardTasks = boardTasks.map((task) => {
+        if (task.id === draggedTask.id) {
+          return {
+            ...task,
+            listTaskId: targetListTaskId,
+            status: nextStatus,
+            orderIndex: insertAt,
+          };
+        }
+
+        return task;
+      });
+
+      setBoardTasks(sortTasks(nextBoardTasks));
+
+      void (async () => {
+        try {
+          await handleApi({
+            url: `${apiName.tasks.updateStatus}/${draggedTask.id}`,
+            method: "PATCH",
+            params: { listTaskId: targetListTaskId },
+            withCredentials: true,
+          });
+
+          await refreshTaskBoardQueries();
+          toast.success("Đã cập nhật trạng thái task");
+        } catch {
+          setBoardTasks(previousTasks);
+          toast.error("Kéo thả thất bại, đã hoàn tác");
+        }
+      })();
+
+      return;
+    }
+
+    const sourceTasks = sortTasks(boardTasks.filter((task) => String(task.listTaskId ?? "") === sourceListTaskId));
+    const targetTasks =
+      sourceListTaskId === targetListTaskId
+        ? sourceTasks
+        : sortTasks(boardTasks.filter((task) => String(task.listTaskId ?? "") === targetListTaskId));
+
+    const sourceIndex = sourceTasks.findIndex((task) => task.id === draggedTask.id);
+    const targetIndex = targetTask
+      ? targetTasks.findIndex((task) => task.id === targetTask.id)
+      : targetTasks.length;
+
+    const nextSourceTasks = sourceTasks
+      .filter((task) => task.id !== draggedTask.id)
+      .map((task, index) => ({
+        ...task,
+        orderIndex: index,
+      }));
+
+    const nextTargetTasks =
+      sourceListTaskId === targetListTaskId
+        ? arrayMove(sourceTasks, sourceIndex, targetIndex).map((task, index) => ({
+            ...task,
+            listTaskId: targetListTaskId,
+            orderIndex: index,
+            status: nextStatus,
+          }))
+        : (() => {
+            const targetTasksWithoutDragged = targetTasks.filter((task) => task.id !== draggedTask.id);
+            const insertAt = targetIndex < 0 ? targetTasksWithoutDragged.length : targetIndex;
+            const reordered = [...targetTasksWithoutDragged];
+            reordered.splice(insertAt, 0, {
+              ...draggedTask,
+              listTaskId: targetListTaskId,
+              status: nextStatus,
+            });
+            return reordered.map((task, index) => ({
+              ...task,
+              listTaskId: targetListTaskId,
+              orderIndex: index,
+              status: nextStatus,
+            }));
+          })();
+
+    const nextBoardTasks = boardTasks.map((task) => {
+      if (sourceListTaskId === targetListTaskId) {
+        const reorderedTask = nextTargetTasks.find((item) => item.id === task.id);
+        return reorderedTask ?? task;
+      }
+
+      if (task.id === draggedTask.id) {
+        return {
+          ...task,
+          listTaskId: targetListTaskId,
+          orderIndex: nextTargetTasks.find((item) => item.id === task.id)?.orderIndex,
+          status: nextStatus,
+        };
+      }
+
+      if (String(task.listTaskId ?? "") === sourceListTaskId) {
+        return nextSourceTasks.find((item) => item.id === task.id) ?? task;
+      }
+
+      if (String(task.listTaskId ?? "") === targetListTaskId) {
+        return nextTargetTasks.find((item) => item.id === task.id) ?? task;
+      }
+
+      return task;
+    });
+
+    setBoardTasks(sortTasks(nextBoardTasks));
+
+    void (async () => {
+      try {
+        if (sourceListTaskId === targetListTaskId) {
+          await saveTaskOrder(nextTargetTasks);
+        } else {
+          await Promise.all([saveTaskOrder(nextSourceTasks), saveTaskOrder(nextTargetTasks)]);
+        }
+
+        await refreshTaskBoardQueries();
+        toast.success("Đã lưu thứ tự task");
+      } catch {
+        setBoardTasks(previousTasks);
+        toast.error("Kéo thả thất bại, đã hoàn tác");
+      }
+    })();
+  };
+
+  const isBoardReady = Boolean(boardProject);
 
   return (
     <Card>
       <CardHeader className="space-y-3">
         <CardTitle>
-          {selectedProjectId
-            ? `Tasks của project: ${selectedProject?.title || selectedProjectId}`
-            : "Task Management"}
+          {selectedProjectId ? `Tasks của project: ${selectedProject?.title || selectedProjectId}` : "Task Management"}
         </CardTitle>
         <CardDescription>
           {selectedProjectId
-            ? "Chỉ hiển thị task thuộc project đang chọn. Bạn có thể tìm kiếm, lọc trạng thái và đổi chế độ xem."
-            : "Quản lý task độc lập: tìm kiếm, lọc theo project/trạng thái và đổi chế độ xem."}
+            ? "Nhấn vào cột để tạo task, kéo thả giữa các cột để cập nhật status, task trong cột được sắp theo deadline gần nhất."
+            : "Chọn project để xem board task tương ứng."}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -172,9 +800,7 @@ const TaskList = ({
 
           <Select
             value={statusFilter}
-            onValueChange={(value) =>
-              setStatusFilter(value as "all" | TaskStatus)
-            }
+            onValueChange={(value) => setStatusFilter(value as "all" | TaskStatus)}
           >
             <SelectTrigger className="w-full xl:w-[180px]">
               <SelectValue placeholder="Lọc trạng thái" />
@@ -222,58 +848,46 @@ const TaskList = ({
                   <TableHead>Assignee</TableHead>
                   <TableHead>Due date</TableHead>
                   <TableHead>Checklist</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTasks.map((task) => (
+                {availableTasks.map((task) => (
                   <TableRow key={task.id}>
                     <TableCell className="font-medium">{task.id}</TableCell>
                     <TableCell>
                       <div className="space-y-1">
-                        <p className="font-medium">{task.title}</p>
+                        <button
+                          type="button"
+                          className="text-left font-medium text-primary hover:underline"
+                          onClick={() => setSelectedTask(task)}
+                        >
+                          {task.title}
+                        </button>
                         <div className="flex flex-wrap gap-1">
                           {task.tags.slice(0, 2).map((tag) => (
-                            <Badge
-                              key={tag}
-                              variant="secondary"
-                              className="text-[10px]"
-                            >
+                            <Badge key={tag} variant="secondary" className="text-[10px]">
                               {tag}
                             </Badge>
                           ))}
                         </div>
                       </div>
                     </TableCell>
+                    <TableCell>{projectMap[String(task.projectId)]?.title ?? "Unknown project"}</TableCell>
                     <TableCell>
-                      {projectMap[String(task.projectId)]?.title ?? "Unknown project"}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={statusMeta[task.status].badgeClass}
-                      >
+                      <Badge variant="outline" className={statusMeta[task.status].badgeClass}>
                         {statusMeta[task.status].label}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={priorityMeta[task.priority].badgeClass}
-                      >
+                      <Badge variant="outline" className={priorityMeta[task.priority].badgeClass}>
                         {priorityMeta[task.priority].label}
                       </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Avatar className="h-7 w-7">
-                          <AvatarImage
-                            src={task.assigneeAvatar}
-                            alt={task.assignee}
-                          />
-                          <AvatarFallback className="text-xs">
-                            {initials(task.assignee)}
-                          </AvatarFallback>
+                          <AvatarImage src={task.assigneeAvatar} alt={task.assignee} />
+                          <AvatarFallback className="text-xs">{initials(task.assignee)}</AvatarFallback>
                         </Avatar>
                         <span className="text-sm">{task.assignee}</span>
                       </div>
@@ -282,37 +896,12 @@ const TaskList = ({
                     <TableCell>
                       {task.checklistDone}/{task.checklistTotal}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => {
-                              onCreateTask?.();
-                            }}
-                            disabled={!onCreateTask}
-                          >
-                            <Plus className="mr-2 h-4 w-4" />
-                            Tạo task mới
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem disabled>ID: {task.id}</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
                   </TableRow>
                 ))}
 
-                {filteredTasks.length === 0 ? (
+                {availableTasks.length === 0 ? (
                   <TableRow>
-                    <TableCell
-                      colSpan={9}
-                      className="py-8 text-center text-muted-foreground"
-                    >
+                    <TableCell colSpan={8} className="py-8 text-center text-muted-foreground">
                       Không có task nào khớp bộ lọc.
                     </TableCell>
                   </TableRow>
@@ -320,154 +909,63 @@ const TaskList = ({
               </TableBody>
             </Table>
           </div>
-        ) : (
-          <div className="overflow-x-auto pb-2">
-            <div className="flex min-w-max items-start gap-4">
-              {statusOrder.map((status) => (
-                <Card
-                  key={status}
-                  className={cn(
-                    "w-[320px] border-2 shadow-sm transition-all duration-200",
-                    statusMeta[status].columnClass,
-                  )}
-                >
-                  <CardHeader className="space-y-3 pb-3">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-base">
-                        {statusMeta[status].label}
-                      </CardTitle>
-                      <Badge variant="secondary">
-                        {groupedTasks[status].length}
-                      </Badge>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-start"
-                      onClick={() => {
-                        onCreateTask?.();
-                      }}
-                      disabled={!onCreateTask}
-                    >
-                      <Plus className="h-4 w-4" />
-                      Thêm task vào {statusMeta[status].label}
-                    </Button>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {groupedTasks[status].map((task) => (
-                      <Card
-                        key={task.id}
-                        className="cursor-pointer border bg-white/95 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
-                      >
-                        <CardContent className="space-y-3 p-3">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="space-y-1">
-                              <p className="line-clamp-2 font-medium">
-                                {task.title}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {task.id}
-                              </p>
-                            </div>
-                            <Badge
-                              variant="outline"
-                              className={priorityMeta[task.priority].badgeClass}
-                            >
-                              {priorityMeta[task.priority].label}
-                            </Badge>
-                          </div>
+        ) : isBoardReady ? (
+          <DndContext sensors={sensor} collisionDetection={pointerWithin} onDragEnd={handleDragEnd}>
+            <div className="pb-2">
+              <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 2xl:grid-cols-4">
+                {statusOrder.map((status) => {
+                  const listTask = listTasksByStatus.get(status);
+                  const columnTasks = groupedTasks[status];
 
-                          <Badge variant="secondary" className="w-fit">
-                            <Target className="h-3.5 w-3.5" />
-                            {projectMap[String(task.projectId)]?.title ??
-                              "Unknown project"}
-                          </Badge>
-
-                          <div className="flex flex-wrap gap-1">
-                            {task.tags.map((tag) => (
-                              <Badge
-                                key={tag}
-                                variant="secondary"
-                                className="text-[10px]"
-                              >
-                                {tag}
-                              </Badge>
-                            ))}
-                          </div>
-
-                          <div className="space-y-1.5">
-                            <div className="flex items-center justify-between text-xs text-muted-foreground">
-                              <span className="inline-flex items-center gap-1">
-                                <LayoutList className="h-3.5 w-3.5" />
-                                Checklist
-                              </span>
-                              <span>
-                                {task.checklistDone}/{task.checklistTotal}
-                              </span>
-                            </div>
-                            <div className="h-1.5 rounded-full bg-muted">
-                              <div
-                                className="h-1.5 rounded-full bg-primary"
-                                style={{
-                                  width: `${calcTaskCompletion(task)}%`,
-                                }}
-                              />
-                            </div>
-                          </div>
-
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span className="inline-flex items-center gap-1">
-                              <Clock3 className="h-3.5 w-3.5" />
-                              {formatDate(task.dueDate)}
-                            </span>
-                            <span className="inline-flex items-center gap-2">
-                              <span className="inline-flex items-center gap-1">
-                                <MessageSquare className="h-3.5 w-3.5" />
-                                {task.comments}
-                              </span>
-                              <span className="inline-flex items-center gap-1">
-                                <Paperclip className="h-3.5 w-3.5" />
-                                {task.attachments}
-                              </span>
-                            </span>
-                          </div>
-
-                          <div className="flex items-center justify-between border-t pt-2">
-                            <div className="flex items-center gap-2">
-                              <Avatar className="h-7 w-7">
-                                <AvatarImage
-                                  src={task.assigneeAvatar}
-                                  alt={task.assignee}
-                                />
-                                <AvatarFallback className="text-[11px]">
-                                  {initials(task.assignee)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="text-xs font-medium">
-                                {task.assignee}
-                              </span>
-                            </div>
-
-                            {task.status === "done" ? (
-                              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                            ) : null}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-
-                    {groupedTasks[status].length === 0 ? (
-                      <div className="rounded-md border border-dashed bg-white/70 p-4 text-center text-sm text-muted-foreground">
-                        Không có task trong cột này.
-                      </div>
-                    ) : null}
-                  </CardContent>
-                </Card>
-              ))}
+                  return (
+                    <TaskBoardColumn
+                      key={status}
+                      status={status}
+                      title={statusMeta[status].label}
+                      tasks={columnTasks}
+                      onAddTask={() => openCreateTaskDialog(status)}
+                      onOpenTaskDetail={setSelectedTask}
+                      canManageTasks={canManageTasks}
+                      canDragTasks={canDragTasks}
+                    />
+                  );
+                })}
+              </div>
             </div>
+          </DndContext>
+        ) : (
+          <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+            Chọn một project để bắt đầu làm việc với board task.
           </div>
         )}
       </CardContent>
+
+      {canManageTasks ? (
+        <CreateTaskDialog
+          open={isCreateTaskDialogOpen}
+          onOpenChange={setIsCreateTaskDialogOpen}
+          form={taskForm}
+          onFieldChange={handleFieldChange}
+          onSubmit={handleCreateTask}
+          project={boardProject}
+          columnLabel={createTaskColumnLabel}
+        />
+      ) : null}
+
+      <TaskDetailDialog
+        task={selectedTask}
+        projectId={String(boardProject?.id ?? selectedTask?.projectId ?? "")}
+        readOnly={!canManageTasks}
+        canEditTask={canManageTasks}
+        canComment
+        canAdvanceStatus
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedTask(null);
+          }
+        }}
+        onTaskUpdated={refreshTaskBoardQueries}
+      />
     </Card>
   );
 };

@@ -1,5 +1,7 @@
 package com.example.trello.dto.request;
 
+import com.example.trello.utils.LocalDateTimeOrDateDeserializer;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
@@ -19,8 +21,10 @@ public class TaskRequest {
 
     Long orderIndex;
 
+    @JsonDeserialize(using = LocalDateTimeOrDateDeserializer.class)
     LocalDateTime dueDate;
 
+    @JsonDeserialize(using = LocalDateTimeOrDateDeserializer.class)
     LocalDateTime reminderDate;
 
     Long assignedAccountId;

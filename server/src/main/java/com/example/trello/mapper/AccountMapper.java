@@ -2,6 +2,7 @@ package com.example.trello.mapper;
 
 import com.example.trello.dto.request.RegisterRequest;
 import com.example.trello.dto.request.UpdateAccountRequest;
+import com.example.trello.dto.response.AccountAssignedProjectResponse;
 import com.example.trello.dto.response.AccountResponse;
 import com.example.trello.model.Account;
 import org.mapstruct.Mapper;
@@ -18,6 +19,8 @@ public interface AccountMapper {
     Account toUser(RegisterRequest request);
 
     AccountResponse toResponse(Account account);
+
+        AccountAssignedProjectResponse toAssignedProjectResponse(Account account);
 
     void updateAccount(@MappingTarget Account account,
                        UpdateAccountRequest request);

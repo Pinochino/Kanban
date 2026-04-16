@@ -15,4 +15,8 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     Optional<Task> findByTitle(String title);
 
     List<Task> findTaskByAssignedAccountAndListTask(Account account, ListTask listTask);
+
+    List<Task> findTaskByListTask(ListTask listTask);
+
+    long countByListTask(ListTask listTask);
 }

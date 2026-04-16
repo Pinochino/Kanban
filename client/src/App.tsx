@@ -16,6 +16,8 @@ import GlobalProvider from "./hooks/providers/GlobalProvider";
 import {AuthProvider} from "./hooks/providers/AuthProvider";
 import ProjectManagement from "./pages/admin/ProjectManagement";
 import TaskManagement from "./pages/admin/TaskManagement";
+import MyTasks from "./pages/MyTasks";
+import UserLayout from "./layouts/UserLayout";
 
 const queryClient = new QueryClient();
 
@@ -54,10 +56,22 @@ const App = () => (
                                             <Route path="users" element={<UserManagement/>}/>
                                             <Route path="users/deleted" element={<SoftDeletedUsers/>}/>
                                             <Route path="projects" element={<ProjectManagement/>}/>
+                                            <Route path="projects/:projectId/tasks" element={<TaskManagement/>}/>
                                             <Route path="tasks" element={<TaskManagement/>}/>
                                             <Route path="moderation" element={<Moderation/>}/>
                                             <Route path="notifications" element={<NotificationControl/>}/>
                                         </Route>
+
+                                        <Route
+                                            path="/my-tasks"
+                                            element={
+                                                <ProtectedRoute>
+                                                    <UserLayout>
+                                                        <MyTasks />
+                                                    </UserLayout>
+                                                </ProtectedRoute>
+                                            }
+                                        />
 
                                         <Route path="*" element={<NotFound/>}/>
                                     </Routes>

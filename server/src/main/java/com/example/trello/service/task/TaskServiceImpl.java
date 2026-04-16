@@ -1,6 +1,7 @@
 package com.example.trello.service.task;
 
 import com.example.trello.constants.ErrorCode;
+import com.example.trello.constants.RoleName;
 import com.example.trello.dto.request.TaskRequest;
 import com.example.trello.dto.response.TaskResponse;
 import com.example.trello.exception.AppError;
@@ -22,6 +23,8 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.Comparator;
+import java.util.Objects;
 
 @Service
 @Slf4j
@@ -58,6 +61,7 @@ public class TaskServiceImpl implements TaskService {
         newTask.setActive(true);
         newTask.setAssignedAccount(account);
         newTask.setListTask(listTask);
+        newTask.setOrderIndex((long) taskRepository.countByListTask(listTask));
 
         newTask = taskRepository.save(newTask);
 
@@ -74,7 +78,7 @@ public class TaskServiceImpl implements TaskService {
 
         List<Task> tasks = taskRepository.findTaskByAssignedAccountAndListTask(account, listTask);
 
-        return tasks.stream()
+        return sortTasks(tasks).stream()
                 .map(taskMapper::toTaskResponse)
                 .collect(Collectors.toList());
     }
@@ -167,12 +171,44 @@ public class TaskServiceImpl implements TaskService {
                 .findById(taskId)
                 .orElseThrow(() -> new AppError(ErrorCode.TASK_NOT_FOUND));
 
+        Account currentAccount = jwtUtil.getCurrentUserLogin();
+
+        if (!canManageTask(task, currentAccount)) {
+            throw new AppError(ErrorCode.TASK_AUTHORIZED);
+        }
+
         ListTask listTask = listTaskRepository
                 .findById(listTaskId)
                 .orElseThrow(() -> new AppError(ErrorCode.LIST_TASK_NOT_FOUND));
 
         task.setListTask(listTask);
+        task.setOrderIndex((long) taskRepository.countByListTask(listTask));
         taskRepository.save(task);
+    }
+
+        private boolean canManageTask(Task task, Account account) {
+                if (account == null) {
+                        return false;
+                }
+
+                boolean elevated = account.getRoles().stream()
+                                .map(role -> role.getName())
+                                .anyMatch(roleName -> roleName == RoleName.SUPER_ADMIN || roleName == RoleName.ADMIN);
+
+                if (elevated) {
+                        return true;
+                }
+
+                return task.getAssignedAccount() != null && Objects.equals(task.getAssignedAccount().getId(), account.getId());
+        }
+
+    private List<Task> sortTasks(List<Task> tasks) {
+        return tasks.stream()
+                .sorted(Comparator
+                        .comparing(Task::getDueDate, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(task -> task.getOrderIndex() == null ? Long.MAX_VALUE : task.getOrderIndex())
+                        .thenComparing(task -> task.getId() == null ? Long.MAX_VALUE : task.getId()))
+                .toList();
     }
 
 

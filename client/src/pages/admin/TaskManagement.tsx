@@ -2,31 +2,35 @@ import { Card, CardContent } from "@/components/ui/card";
 import TaskList from "@/domains/projects/TaskList";
 import { useGetAllData } from "@/hooks/useGetAllData";
 import { apiName } from "@/api/apiName";
-import { initialProjects, initialTasks } from "./ProjectManagement";
 import { Sparkles } from "lucide-react";
 import { useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 
 const TaskManagement = () => {
-  const { data: projectList } = useGetAllData({ url: apiName.projects.list });
+  const { projectId: routeProjectId } = useParams();
   const [searchParams] = useSearchParams();
-  const selectedProjectId = searchParams.get("projectId");
+  const selectedProjectId = routeProjectId ?? searchParams.get("projectId");
+  const projectRequestUrl = selectedProjectId
+    ? `${apiName.projects.detail}/${selectedProjectId}`
+    : apiName.projects.list;
+
+  const {
+    data: projectData,
+    isLoading,
+    isError,
+  } = useGetAllData({ url: projectRequestUrl });
 
   const displayProjects = useMemo(() => {
-    if (Array.isArray(projectList) && projectList.length > 0) {
-      return projectList;
+    if (!projectData) {
+      return [];
     }
 
-    return initialProjects.map((project) => ({
-      id: project.id,
-      title: project.name,
-      description: project.summary,
-      createdBy: {
-        id: String(project.id),
-        username: project.owner,
-      },
-    }));
-  }, [projectList]);
+    if (Array.isArray(projectData)) {
+      return projectData;
+    }
+
+    return [projectData];
+  }, [projectData]);
 
   return (
     <div className="space-y-6">
@@ -38,16 +42,26 @@ const TaskManagement = () => {
           </p>
           <h1 className="text-2xl font-semibold md:text-3xl">Task Management</h1>
           <p className="max-w-2xl text-sm text-slate-200">
-            Trang task tách riêng khỏi project để theo dõi và xử lý công việc tập trung.
+            {selectedProjectId
+              ? `Board task riêng của project ${selectedProjectId}.`
+              : "Trang task tách riêng khỏi project để theo dõi và xử lý công việc tập trung."}
           </p>
         </CardContent>
       </Card>
 
-      <TaskList
-        projectList={displayProjects}
-        selectedProjectId={selectedProjectId}
-        tasks={initialTasks}
-      />
+      {isLoading ? (
+        <Card>
+          <CardContent className="p-6 text-sm text-muted-foreground">Đang tải board task...</CardContent>
+        </Card>
+      ) : isError ? (
+        <Card>
+          <CardContent className="p-6 text-sm text-red-600">
+            Không thể tải dữ liệu project/task. Vui lòng tải lại trang.
+          </CardContent>
+        </Card>
+      ) : (
+        <TaskList projectList={displayProjects} selectedProjectId={selectedProjectId} />
+      )}
     </div>
   );
 };

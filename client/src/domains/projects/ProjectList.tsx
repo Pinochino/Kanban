@@ -8,18 +8,13 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { IProject } from "@/types/ProjectInterface";
-import { ChevronDown, ChevronUp, FolderKanban, UserRound } from "lucide-react";
-import React from "react";
+import { ChevronRight, FolderKanban, UserRound } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const ProjectList = ({
     projectList,
-    expandProjectId,
-    setExpandedProjectId,
 }: {
     projectList: IProject[];
-    expandProjectId?: string | number | null;
-    setExpandedProjectId?: React.Dispatch<React.SetStateAction<string | number | null>>;
 }) => {
     const projects = (Array.isArray(projectList) && Array.from(projectList)) || [];
 
@@ -28,7 +23,7 @@ const ProjectList = ({
             <CardHeader className="space-y-3">
                 <CardTitle>Danh sách Projects</CardTitle>
                 <CardDescription>
-                    Trang này ưu tiên project trước. Nhấn vào từng project để mở phần task tương ứng bên dưới.
+                    Trang này tách riêng cho project. Chọn project để mở trang task riêng của project đó.
                 </CardDescription>
             </CardHeader>
 
@@ -40,12 +35,22 @@ const ProjectList = ({
                 ) : (
                     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                         {projects.map((project) => {
-                            const isExpanded = expandProjectId === project.id;
+                            const totalTasks = (project.listTasks ?? []).reduce(
+                                (count, listTask) => count + (listTask.taskList?.length ?? 0),
+                                0,
+                            );
+
+                            const doneTasks = (project.listTasks ?? []).reduce((count, listTask) => {
+                                const status = String(listTask.status).toLowerCase();
+                                return status === "done" ? count + (listTask.taskList?.length ?? 0) : count;
+                            }, 0);
+
+                            const progress = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
 
                             return (
                                 <Card
                                     key={project.id}
-                                    className={isExpanded ? "border-primary bg-primary/5" : "border-border"}
+                                    className="border-border"
                                 >
                                     <CardContent className="space-y-4 p-4">
                                         <div className="flex items-start justify-between gap-2">
@@ -66,30 +71,30 @@ const ProjectList = ({
                                             <Badge variant="outline">ID: {project.id}</Badge>
                                         </div>
 
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                                <span>Progress</span>
+                                                <span>
+                                                    {doneTasks}/{totalTasks} ({progress}%)
+                                                </span>
+                                            </div>
+                                            <div className="h-2 rounded-full bg-slate-200">
+                                                <div
+                                                    className="h-2 rounded-full bg-emerald-500"
+                                                    style={{ width: `${progress}%` }}
+                                                />
+                                            </div>
+                                        </div>
+
                                         <Button
-                                            variant={isExpanded ? "default" : "outline"}
+                                            variant="outline"
                                             className="w-full"
-                                            asChild={!setExpandedProjectId}
-                                            onClick={() => setExpandedProjectId?.(isExpanded ? null : project.id)}
+                                            asChild
                                         >
-                                            {setExpandedProjectId ? (
-                                                isExpanded ? (
-                                                    <>
-                                                        <ChevronUp className="h-4 w-4" />
-                                                        Ẩn task
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <ChevronDown className="h-4 w-4" />
-                                                        Xem task
-                                                    </>
-                                                )
-                                            ) : (
-                                                <Link to={`/tasks?projectId=${project.id}`}>
-                                                    <ChevronDown className="h-4 w-4" />
-                                                    Mở trang task
-                                                </Link>
-                                            )}
+                                            <Link to={`/projects/${project.id}/tasks`}>
+                                                <ChevronRight className="h-4 w-4" />
+                                                Mở task của project
+                                            </Link>
                                         </Button>
                                     </CardContent>
                                 </Card>

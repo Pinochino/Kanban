@@ -23,7 +23,31 @@ export const apiName = {
 
     projects: {
         list: "/projects/list",
+        detail: "/projects/detail",
         create: "/projects/create",
+    },
+
+    tasks: {
+        list: "/tasks/list",
+        detail: "/tasks/detail",
+        create: "/tasks/create",
+        update: "/tasks/update",
+        updateStatus: "/tasks/update-status",
+    },
+
+    labels: {
+        list: "/labels/list",
+        create: "/labels/create",
+    },
+
+    comments: {
+        list: "/comments/list",
+        create: "/comments/create",
+    },
+
+    taskLabels: {
+        list: "/task-labels/list",
+        toggle: "/task-labels/toggle",
     },
 
     roles: {

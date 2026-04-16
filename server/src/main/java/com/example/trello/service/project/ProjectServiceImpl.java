@@ -13,6 +13,7 @@ import com.example.trello.model.Project;
 import com.example.trello.repository.AccountRepository;
 import com.example.trello.repository.ListTaskRepository;
 import com.example.trello.repository.ProjectRepository;
+import com.example.trello.dto.response.TaskResponse;
 import com.example.trello.utils.JwtUtil;
 import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
@@ -21,8 +22,9 @@ import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 
 @Service
 @Slf4j
@@ -30,12 +32,20 @@ import java.util.Optional;
 @FieldDefaults(level = AccessLevel.PACKAGE, makeFinal = true)
 public class ProjectServiceImpl implements ProjectService {
 
+    private static final Map<ListTaskStatus, Integer> LIST_TASK_ORDER = Map.of(
+            ListTaskStatus.TO_DO, 0,
+            ListTaskStatus.IN_PROGRESS, 1,
+            ListTaskStatus.REVIEW, 2,
+            ListTaskStatus.DONE, 3
+    );
+
     ProjectRepository projectRepository;
     AccountRepository accountRepository;
     ListTaskRepository listTaskRepository;
     ProjectMapper projectMapper;
     JwtUtil jwtUtil;
 
+    @Transactional
     @Override
     public List<ProjectResponse> getProjects() {
         return projectRepository.findAll().stream().map(project -> {
@@ -51,14 +61,18 @@ public class ProjectServiceImpl implements ProjectService {
                     .build();
 
             response.setCreatedBy(accountCreated);
+            normalizeProjectResponse(response);
             return response;
         }).toList();
     }
 
+    @Transactional
     @Override
     public ProjectResponse getProject(Long id) {
         Project project = projectRepository.findById(id).orElseThrow(() -> new AppError(ErrorCode.PROJECT_NOT_FOUND));
-        return projectMapper.toResponse(project);
+        ProjectResponse response = projectMapper.toResponse(project);
+        normalizeProjectResponse(response);
+        return response;
     }
 
     @Transactional
@@ -80,16 +94,16 @@ public class ProjectServiceImpl implements ProjectService {
 
         newProject = projectRepository.save(newProject);
 
-        Optional<ListTask> oldListTask = listTaskRepository.findByProjectId(newProject.getId());
+        List<ListTask> oldListTask = listTaskRepository.findAllByProjectId(newProject.getId());
         List<ListTask> listTasks = List.of(
-                new ListTask(ListTaskStatus.IN_PROGRESS, newProject),
-                new ListTask(ListTaskStatus.TO_DO, newProject),
-                new ListTask(ListTaskStatus.DONE, newProject),
-                new ListTask(ListTaskStatus.REVIEW, newProject),
-                new ListTask(ListTaskStatus.BLOCKED, newProject));
+            createListTask(ListTaskStatus.TO_DO, newProject, 0L),
+            createListTask(ListTaskStatus.IN_PROGRESS, newProject, 1L),
+            createListTask(ListTaskStatus.REVIEW, newProject, 2L),
+            createListTask(ListTaskStatus.DONE, newProject, 3L));
 
         if (oldListTask.isEmpty()) {
-            listTaskRepository.saveAll(listTasks);
+            List<ListTask> savedListTasks = listTaskRepository.saveAll(listTasks);
+            newProject.getListTasks().addAll(savedListTasks);
         }
 
         Account account = accountRepository
@@ -103,8 +117,35 @@ public class ProjectServiceImpl implements ProjectService {
 
         ProjectResponse projectResponse = projectMapper.toResponse(newProject);
         projectResponse.setCreatedBy(accountCreated);
+        normalizeProjectResponse(projectResponse);
 
         return projectResponse;
+    }
+
+    private ListTask createListTask(ListTaskStatus status, Project project, Long orderIndex) {
+        ListTask listTask = new ListTask(status, project);
+        listTask.setOrderIndex(orderIndex);
+        return listTask;
+    }
+
+    private void normalizeProjectResponse(ProjectResponse response) {
+        if (response.getListTasks() == null || response.getListTasks().isEmpty()) {
+            return;
+        }
+
+        response.getListTasks().sort(Comparator.comparingInt(listTaskResponse ->
+                LIST_TASK_ORDER.getOrDefault(listTaskResponse.getStatus(), Integer.MAX_VALUE)));
+
+        response.getListTasks().forEach(listTask -> {
+            if (listTask.getTaskList() == null) {
+                return;
+            }
+
+            listTask.getTaskList().sort(Comparator
+                    .comparing(TaskResponse::getDueDate, Comparator.nullsLast(Comparator.naturalOrder()))
+                    .thenComparing(task -> task.getOrderIndex() == null ? Long.MAX_VALUE : task.getOrderIndex())
+                    .thenComparing(task -> task.getId() == null ? Long.MAX_VALUE : task.getId()));
+        });
     }
 
 

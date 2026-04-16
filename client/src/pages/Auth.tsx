@@ -16,6 +16,7 @@ import { Kanban } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { RootState } from "@/store/store";
 import authService from "@/services/AuthService";
+import { getHomePath } from "@/utils/auth";
 
 export default function Auth() {
   const [loginEmail, setLoginEmail] = useState("");
@@ -27,16 +28,9 @@ export default function Auth() {
   const navigate = useNavigate();
 
   const dispatch = useAppDispatch();
-  const {
-    data: userLogin,
-    error,
-    status: loginStatus,
-  } = useAppSelector((state: RootState) => state.auth.login);
+  const { status: loginStatus } = useAppSelector((state: RootState) => state.auth.login);
 
-  const { data: userRegister,
-    status: registerStatus, } = useAppSelector(
-      (state: RootState) => state.auth.register,
-    );
+  const { status: registerStatus } = useAppSelector((state: RootState) => state.auth.register);
 
   if (loginStatus === "pending" || registerStatus === "pending")
     return (
@@ -54,10 +48,9 @@ export default function Auth() {
       password: loginPassword,
     };
     try {
+      const account = await dispatch(authService.login({ ...loginPaylog })).unwrap();
 
-      await dispatch(authService.login({ ...loginPaylog })).unwrap();
-
-      navigate("/");
+      navigate(getHomePath(account));
       toast.success("Đăng nhập thành công!");
     } catch (err: any) {
       toast.error(err);
@@ -75,8 +68,8 @@ export default function Auth() {
       password: registerPassword,
     };
     try {
-      await dispatch(authService.register({ ...payload })).unwrap();
-      navigate("/")
+      const account = await dispatch(authService.register({ ...payload })).unwrap();
+      navigate(getHomePath(account));
       toast.success("Đăng kí thành công!");
 
     } catch (err: any) {

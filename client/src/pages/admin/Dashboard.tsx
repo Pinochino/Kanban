@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Kanban, CheckSquare, Activity } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
+import { useGetAllData } from "@/hooks/useGetAllData";
+import { apiName } from "@/api/apiName";
 
 export default function AdminDashboard() {
   const { data: stats } = useQuery({
@@ -36,6 +38,10 @@ export default function AdminDashboard() {
       return Object.entries(counts).map(([name, value]) => ({ name, value }));
     },
   });
+
+  const { data: userList } = useGetAllData({ url: apiName.accounts.list });
+
+  const users = Array.isArray(userList) ? Array.from(userList) : [];
 
   // Generate last 7 days data
   const last7Days = Array.from({ length: 7 }, (_, i) => {

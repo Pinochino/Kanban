@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 @Setter
 @NoArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class CustomUserDetail implements UserDetails, CredentialsContainer {
+public class CustomUserDetail implements UserDetails {
 
     Account account;
     String prefixRole = "ROLE_";
@@ -61,11 +61,6 @@ public class CustomUserDetail implements UserDetails, CredentialsContainer {
     @Override
     public boolean isEnabled() {
         return account.isActive();
-    }
-
-    @Override
-    public void eraseCredentials() {
-        this.account.setPassword(null);
     }
 
 }
