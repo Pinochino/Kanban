@@ -19,6 +19,7 @@ import com.example.trello.repository.RoleRepository;
 import com.example.trello.repository.AccountRepository;
 import com.example.trello.security.CustomUserDetail;
 import com.example.trello.service.jwt.JwtService;
+import com.example.trello.service.mail.MailService;
 import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.Date;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -43,11 +45,14 @@ public class AuthServiceImpl implements AuthService {
 
     AccountRepository accountRepository;
     RoleRepository roleRepository;
-    PasswordEncoder passwordEncoder;
-    AccountMapper accountMapper;
-    AuthenticationManager authenticationManager;
-    JwtService jwtService;
     RedisTokenRepository redisTokenRepository;
+
+    PasswordEncoder passwordEncoder;
+    AuthenticationManager authenticationManager;
+
+    AccountMapper accountMapper;
+    JwtService jwtService;
+    MailService mailService;
 
 
     @Override
@@ -78,30 +83,14 @@ public class AuthServiceImpl implements AuthService {
 
         accountRepository.save(newAccount);
 
-        AccountResponse accountResponse = accountMapper.toResponse(newAccount);
-        TokenPayload accessTokenPayload = jwtService.generateAccessToken(newAccount);
-        String refreshToken = jwtService.generateRefreshToken();
 
-        redisTokenRepository.save(
-                RedisToken.builder()
-                        .tokenType(TokenType.ACCESS_TOKEN)
-                        .jwtId(accessTokenPayload.getJwtId())
-                        .expiredTime(accessTokenPayload.getExpiredTime().getTime())
-                        .build());
+        mailService.sendSimpleMessage(
+                newAccount.getEmail(),
+                "Register successfully",
+                newAccount.getUsername(),
+                "Nice to meet you");
 
-        redisTokenRepository.save(
-                RedisToken.builder()
-                        .tokenType(TokenType.REFRESH_TOKEN)
-                        .expiredTime(Date.from(Instant.now().plusSeconds(60 * 60 * 24 * 7)).getTime())
-                        .jwtId(jwtService.hashRefreshToken(refreshToken))
-                        .userId(newAccount.getId())
-                        .build());
-
-        return LoginResponse.builder()
-                .accessToken(accessTokenPayload.getToken())
-                .refreshToken(refreshToken)
-                .account(accountResponse)
-                .build();
+        return authResponse(newAccount);
     }
 
     @Override
@@ -122,7 +111,7 @@ public class AuthServiceImpl implements AuthService {
 
         CustomUserDetail userDetail = (CustomUserDetail) authenticated.getPrincipal();
 
-        Account accountLogin = userDetail.getAccount();
+        Account accountLogin = Objects.requireNonNull(userDetail).getAccount();
 
         if (accountLogin == null) {
             throw new AppError(ErrorCode.INVALID_CREDENTIALS);
@@ -131,9 +120,12 @@ public class AuthServiceImpl implements AuthService {
         accountLogin.setLogin(true);
         accountLogin = accountRepository.save(accountLogin);
 
+        return authResponse(accountLogin);
+    }
 
-        AccountResponse accountResponse = accountMapper.toResponse(accountLogin);
-        TokenPayload accessTokenPayload = jwtService.generateAccessToken(accountLogin);
+    private LoginResponse authResponse(Account account) {
+        AccountResponse accountResponse = accountMapper.toResponse(account);
+        TokenPayload accessTokenPayload = jwtService.generateAccessToken(account);
         String refreshToken = jwtService.generateRefreshToken();
 
         redisTokenRepository.save(
@@ -148,7 +140,7 @@ public class AuthServiceImpl implements AuthService {
                         .tokenType(TokenType.REFRESH_TOKEN)
                         .expiredTime(Date.from(Instant.now().plusSeconds(60 * 60 * 24 * 7)).getTime())
                         .jwtId(jwtService.hashRefreshToken(refreshToken))
-                        .userId(accountLogin.getId())
+                        .userId(account.getId())
                         .build());
 
 
