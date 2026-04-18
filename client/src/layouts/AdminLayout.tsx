@@ -1,4 +1,5 @@
 import { Outlet } from "react-router-dom";
+import type { ReactNode } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { ModeToggle } from "@/components/ui/mode-toggle";
@@ -8,7 +9,11 @@ import { useRouteTransitionLoading } from "@/hooks/useRouteTransitionLoading";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/i18n/I18nProvider";
 
-export default function AdminLayout() {
+type AdminLayoutProps = {
+  children?: ReactNode;
+};
+
+export default function AdminLayout({ children }: AdminLayoutProps) {
   const isTransitionLoading = useRouteTransitionLoading(1000);
   const { t } = useI18n();
 
@@ -39,7 +44,7 @@ export default function AdminLayout() {
             </div>
           </header>
           <main className="flex-1 overflow-auto p-4 lg:p-6">
-            {isTransitionLoading ? <RoutePageSkeleton /> : <Outlet />}
+            {isTransitionLoading ? <RoutePageSkeleton /> : children ?? <Outlet />}
           </main>
         </div>
       </div>

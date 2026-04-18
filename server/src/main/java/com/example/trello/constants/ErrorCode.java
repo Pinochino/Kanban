@@ -46,6 +46,13 @@ public enum ErrorCode {
     AVATAR_FILE_REQUIRED(127, "Avatar file is required", HttpStatus.BAD_REQUEST),
     AVATAR_INVALID_FILE_TYPE(128, "Avatar file must be an image", HttpStatus.BAD_REQUEST),
     AVATAR_UPLOAD_FAILED(129, "Avatar upload failed", HttpStatus.INTERNAL_SERVER_ERROR),
+    NOTIFICATION_NOT_FOUND(130, "Notification Not Found", HttpStatus.NOT_FOUND),
+    NOTIFICATION_AUTHORIZED(131, "You don't have permission to access this notification", HttpStatus.FORBIDDEN),
+    NOTIFICATION_INVALID_CHANNEL(132, "Notification channel is invalid", HttpStatus.BAD_REQUEST),
+    CHAT_GROUP_NOT_FOUND(133, "Chat Group Not Found", HttpStatus.NOT_FOUND),
+    CHAT_GROUP_FORBIDDEN(134, "You don't have permission to access this chat group", HttpStatus.FORBIDDEN),
+    CHAT_GROUP_MEMBER_REQUIRED(135, "Chat group requires at least one other member", HttpStatus.BAD_REQUEST),
+    CHAT_GROUP_NAME_INVALID(136, "Chat group name is invalid", HttpStatus.BAD_REQUEST),
 
 
     //    LIST_TASK

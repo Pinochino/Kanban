@@ -17,6 +17,11 @@ import { IProject } from "@/types/ProjectInterface";
 import { Badge } from "@/components/ui/badge";
 import { FormEvent } from "react";
 import { IUser } from "@/types/UserInterface";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon, Loader2 } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 type TaskDateErrors = {
   dueDate?: string;
@@ -32,7 +37,17 @@ interface CreateTaskDialogProps {
   project?: IProject | null;
   columnLabel?: string;
   dateErrors?: TaskDateErrors;
+  isSubmitting?: boolean;
 }
+
+const parseDateValue = (value?: string): Date | undefined => {
+  if (!value) {
+    return undefined;
+  }
+
+  const parsed = new Date(`${value}T00:00:00`);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+};
 
 const CreateTaskDialog = ({
   open,
@@ -43,6 +58,7 @@ const CreateTaskDialog = ({
   project,
   columnLabel,
   dateErrors,
+  isSubmitting = false,
 }: CreateTaskDialogProps) => {
   const { data: userList } = useGetAllData({ url: apiName.accounts.list });
 
@@ -105,13 +121,36 @@ const CreateTaskDialog = ({
 
             <div className="space-y-2">
               <Label htmlFor="task-due-date">Due date</Label>
-              <Input
-                id="task-due-date"
-                type="date"
-                value={form.dueDate}
-                onChange={(event) => onFieldChange("dueDate", event.target.value)}
-                aria-invalid={Boolean(dateErrors?.dueDate)}
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="task-due-date"
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !form.dueDate && "text-muted-foreground",
+                      dateErrors?.dueDate && "border-destructive",
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {form.dueDate ? format(parseDateValue(form.dueDate) ?? new Date(), "dd/MM/yyyy") : "Chọn due date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={parseDateValue(form.dueDate)}
+                    onSelect={(date) => onFieldChange("dueDate", date ? format(date, "yyyy-MM-dd") : "")}
+                    className="p-3 pointer-events-auto"
+                  />
+                  {form.dueDate ? (
+                    <div className="border-t p-2">
+                      <Button type="button" variant="ghost" size="sm" className="w-full" onClick={() => onFieldChange("dueDate", "")}>Xóa due date</Button>
+                    </div>
+                  ) : null}
+                </PopoverContent>
+              </Popover>
               {dateErrors?.dueDate ? (
                 <p className="text-xs text-destructive">{dateErrors.dueDate}</p>
               ) : null}
@@ -119,13 +158,36 @@ const CreateTaskDialog = ({
 
             <div className="space-y-2">
               <Label htmlFor="task-reminder-date">Reminder date</Label>
-              <Input
-                id="task-reminder-date"
-                type="date"
-                value={form.reminderDate}
-                onChange={(event) => onFieldChange("reminderDate", event.target.value)}
-                aria-invalid={Boolean(dateErrors?.reminderDate)}
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="task-reminder-date"
+                    type="button"
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !form.reminderDate && "text-muted-foreground",
+                      dateErrors?.reminderDate && "border-destructive",
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {form.reminderDate ? format(parseDateValue(form.reminderDate) ?? new Date(), "dd/MM/yyyy") : "Chọn reminder date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={parseDateValue(form.reminderDate)}
+                    onSelect={(date) => onFieldChange("reminderDate", date ? format(date, "yyyy-MM-dd") : "")}
+                    className="p-3 pointer-events-auto"
+                  />
+                  {form.reminderDate ? (
+                    <div className="border-t p-2">
+                      <Button type="button" variant="ghost" size="sm" className="w-full" onClick={() => onFieldChange("reminderDate", "")}>Xóa reminder date</Button>
+                    </div>
+                  ) : null}
+                </PopoverContent>
+              </Popover>
               {dateErrors?.reminderDate ? (
                 <p className="text-xs text-destructive">{dateErrors.reminderDate}</p>
               ) : null}
@@ -133,10 +195,19 @@ const CreateTaskDialog = ({
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
               Cancel
             </Button>
-            <Button type="submit">Create task</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <span className="inline-flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Creating...
+                </span>
+              ) : (
+                "Create task"
+              )}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

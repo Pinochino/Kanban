@@ -5,6 +5,7 @@ import com.example.trello.model.Account;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -30,4 +31,13 @@ public interface AccountRepository extends JpaRepository<Account, Long>, JpaSpec
 
     @Query("select acc from Account acc where acc.isDeleted = ?1")
     List<Account> findAccountsByDeleted(boolean deleted);
+
+        @Query("""
+                        select acc from Account acc
+                where acc.id <> :currentUserId
+                            and acc.isDeleted = false
+                            and acc.isActive = true
+                        order by acc.username asc
+                        """)
+            List<Account> findChatContacts(@Param("currentUserId") Long currentUserId);
 }

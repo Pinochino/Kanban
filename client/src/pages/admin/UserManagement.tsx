@@ -61,7 +61,7 @@ import useDebounce from "@/hooks/useDebounce";
 import { useEnterSkeletonLoading, useMinVisibleLoading } from "@/hooks/useMinimumLoading";
 import { buildQuery } from "@/utils/QueryUtils";
 
-const USER_PAGE_SIZE_OPTIONS = [5, 10, 20, 50] as const;
+const USER_PAGE_SIZE_OPTIONS = [5, 10, 15, 20] as const;
 
 export default function UserManagement() {
   const queryClient = useQueryClient();
@@ -957,7 +957,7 @@ export default function UserManagement() {
           </div>
 
           {/* PAGINATION */}
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-slate-50/70 px-3 py-2 text-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/70 bg-muted/40 px-3 py-2 text-sm shadow-sm">
             <span className="text-muted-foreground">
               Trang {page + 1} - {users.length} user trong trang này
             </span>
@@ -970,7 +970,7 @@ export default function UserManagement() {
                   setPage(0);
                 }}
               >
-                <SelectTrigger className="h-8 w-[110px]" id="select-rows-per-page">
+                <SelectTrigger className="h-8 w-[110px] bg-background/70" id="select-rows-per-page">
                   <SelectValue placeholder="Page size" />
                 </SelectTrigger>
                 <SelectContent align="start">
@@ -984,16 +984,17 @@ export default function UserManagement() {
                 </SelectContent>
               </Select>
 
-              <Button variant="outline" size="sm" onClick={handleFirstPage} disabled={isFetching || page === 0}>
+              <Button variant="outline" size="sm" className="bg-background/70 hover:bg-accent/70" onClick={handleFirstPage} disabled={isFetching || page === 0}>
                 First
               </Button>
-              <Button variant="outline" size="sm" onClick={handlePreviousPage} disabled={isFetching || !canGoPrevious}>
+              <Button variant="outline" size="sm" className="bg-background/70 hover:bg-accent/70" onClick={handlePreviousPage} disabled={isFetching || !canGoPrevious}>
                 Prev
               </Button>
               <span className="min-w-16 text-center text-xs text-muted-foreground">Trang {page + 1}</span>
               <Button
                 variant="outline"
                 size="sm"
+                className="bg-background/70 hover:bg-accent/70"
                 onClick={handleNextPage}
                 disabled={isLoading || isFetching || isCheckingNextPage || !canGoNext}
               >

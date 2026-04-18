@@ -18,6 +18,7 @@ import MyTasks from "./pages/MyTasks";
 import UserLayout from "./layouts/UserLayout";
 import TaskManagement from "./pages/admin/TaskManagement";
 import { I18nProvider } from "@/i18n/I18nProvider";
+import ChatRoute from "./pages/ChatRoute";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +61,15 @@ const App = () => (
                                             <Route path="projects/:projectId/tasks" element={<TaskManagement/>}/>
                                             <Route path="notifications" element={<NotificationControl/>}/>
                                         </Route>
+
+                                            <Route
+                                                path="/chat"
+                                                element={
+                                                    <ProtectedRoute>
+                                                        <ChatRoute />
+                                                    </ProtectedRoute>
+                                                }
+                                            />
 
                                         <Route
                                             path="/my-tasks"

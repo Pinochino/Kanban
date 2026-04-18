@@ -41,6 +41,23 @@ export const apiName = {
         stats: "/dashboard/stats",
     },
 
+    notifications: {
+        adminCreate: "/notifications/admin/create",
+        adminList: "/notifications/admin/list",
+        myList: "/notifications/my/list",
+        markRead: "/notifications",
+        retry: "/notifications/admin/retry",
+    },
+
+    chats: {
+        contacts: "/chats/contacts",
+        conversation: "/chats/conversation",
+        send: "/chats/send",
+        groups: "/chats/groups",
+        groupConversation: "/chats/groups",
+        groupSend: "/chats/groups",
+    },
+
     labels: {
         list: "/labels/list",
         create: "/labels/create",

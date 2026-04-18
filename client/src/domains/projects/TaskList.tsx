@@ -77,7 +77,7 @@ type TaskDateErrors = {
   reminderDate?: string;
 };
 
-const TASK_PAGE_SIZE_OPTIONS = [8, 12, 20, 40] as const;
+const TASK_PAGE_SIZE_OPTIONS = [5, 10, 15, 20] as const;
 
 const normalizeStatus = (status?: string | null): TaskStatus => {
   const normalized = (status ?? "").toLowerCase();
@@ -465,7 +465,7 @@ const TaskList = ({
   const [statusFilter, setStatusFilter] = useState<"all" | TaskStatus>("all");
   const [projectFilter, setProjectFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(12);
+  const [pageSize, setPageSize] = useState<number>(10);
   const [isCreateTaskDialogOpen, setIsCreateTaskDialogOpen] = useState(false);
   const [createTaskProjectId, setCreateTaskProjectId] = useState<string>("");
   const [createTaskListTaskId, setCreateTaskListTaskId] = useState<string>("");
@@ -655,16 +655,30 @@ const TaskList = ({
         withCredentials: true,
       });
     },
-    onSuccess: async () => {
+    onSuccess: (response) => {
       setCurrentPage(1);
-      await refreshTaskBoardQueries();
-      toast.success("Đã tạo task mới");
       setIsCreateTaskDialogOpen(false);
       setTaskForm(defaultNewTask);
       setCreateTaskProjectId("");
       setCreateTaskListTaskId("");
       setCreateTaskColumnLabel("");
       setTaskFormErrors({});
+
+      const createdTask = response?.data?.data as ITask | undefined;
+      if (createdTask && boardProject) {
+        const targetListTask = createdTask.listTaskId ? listTaskById.get(String(createdTask.listTaskId)) : undefined;
+        const mappedTask = buildTaskFromApi(
+          createdTask,
+          String(createdTask.projectId ?? boardProject.id),
+          targetListTask?.status,
+          targetListTask?.id,
+        );
+
+        setBoardTasks((prev) => sortTasks([...prev, mappedTask]));
+      }
+
+      toast.success("Đã tạo task mới");
+      void refreshTaskBoardQueries();
     },
     onError: (error) => {
       toast.error(extractApiErrorMessage(error, "Tạo task thất bại"));
@@ -1195,6 +1209,7 @@ const TaskList = ({
           form={taskForm}
           onFieldChange={handleFieldChange}
           onSubmit={handleCreateTask}
+          isSubmitting={createTaskMutation.isPending}
           project={boardProject}
           columnLabel={createTaskColumnLabel}
           dateErrors={taskFormErrors}

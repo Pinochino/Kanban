@@ -47,6 +47,7 @@ public class SecurityConfig {
             "/tasks/update/**",
             "/tasks/delete/**",
             "/tasks/delete-all",
+            "/notifications/admin/**",
     };
 
     CustomAccessDeniedHandler accessDeniedHandler;

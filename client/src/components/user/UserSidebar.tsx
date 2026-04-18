@@ -1,4 +1,4 @@
-import { Kanban, LogOut, LayoutList } from "lucide-react";
+import { Kanban, LogOut, LayoutList, MessagesSquare } from "lucide-react";
 import { useLocation } from "react-router-dom";
 
 import { NavLink } from "@/components/NavLink";
@@ -31,7 +31,10 @@ export function UserSidebar() {
   const { user } = useCurrentUser();
   const { t } = useI18n();
 
-  const menuItems = [{ title: t("sidebar.myTasks"), url: "/my-tasks", icon: LayoutList }];
+  const menuItems = [
+    { title: t("sidebar.myTasks"), url: "/my-tasks", icon: LayoutList },
+    { title: t("sidebar.chat"), url: "/chat", icon: MessagesSquare },
+  ];
 
   const signOut = async () => {
     try {

@@ -24,6 +24,8 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
 
     List<Task> findTaskByListTask(ListTask listTask);
 
+    List<Task> findByAssignedAccountIdAndIsActiveTrue(Long assignedAccountId);
+
     long countByListTask(ListTask listTask);
 
     @Query("select count(t) from Task t")

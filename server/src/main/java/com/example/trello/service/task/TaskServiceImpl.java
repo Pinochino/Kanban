@@ -14,6 +14,7 @@ import com.example.trello.model.Task;
 import com.example.trello.repository.AccountRepository;
 import com.example.trello.repository.ListTaskRepository;
 import com.example.trello.repository.TaskRepository;
+import com.example.trello.service.notification.NotificationService;
 import com.example.trello.utils.JwtUtil;
 import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
@@ -45,6 +46,7 @@ public class TaskServiceImpl implements TaskService {
     ListTaskRepository listTaskRepository;
     JwtUtil jwtUtil;
     TaskMapper taskMapper;
+        NotificationService notificationService;
 
     @Transactional
     @Override
@@ -74,6 +76,7 @@ public class TaskServiceImpl implements TaskService {
         newTask.setOrderIndex((long) taskRepository.countByListTask(listTask));
 
         newTask = taskRepository.save(newTask);
+        notificationService.notifyTaskAssigned(newTask, account, jwtUtil.getCurrentUserLogin());
 
         return taskMapper.toTaskResponse(newTask);
     }
@@ -198,6 +201,8 @@ public class TaskServiceImpl implements TaskService {
                 .findById(taskId)
                 .orElseThrow(() -> new AppError(ErrorCode.TASK_NOT_FOUND));
 
+        Long previousAssignedAccountId = task.getAssignedAccount() != null ? task.getAssignedAccount().getId() : null;
+
         Account account = accountRepository
                 .findById(taskRequest.getAssignedAccountId())
                 .orElseThrow(() -> new AppError(ErrorCode.USER_NOT_FOUND));
@@ -211,6 +216,10 @@ public class TaskServiceImpl implements TaskService {
         task.setListTask(listTask);
 
         task = taskRepository.save(task);
+
+                if (!Objects.equals(previousAssignedAccountId, account.getId())) {
+                        notificationService.notifyTaskAssigned(task, account, jwtUtil.getCurrentUserLogin());
+                }
 
         return taskMapper.toTaskResponse(task);
     }

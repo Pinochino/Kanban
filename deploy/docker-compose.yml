@@ -1,0 +1,74 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: kanban-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: kanban
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 123456
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d kanban"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: kanban-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  server:
+    build:
+      context: ../server
+      dockerfile: Dockerfile
+    container_name: kanban-server
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/kanban
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 123456
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SERVER_PORT: 9000
+      SERVER_SERVLET_CONTEXT_PATH: /api
+      JWT_ACCESS_KEY: MYKo/rTjkoG1x3vxBsidNu03Fdw5XlHLuCGCnyX58GMtntqvmpplHpQnjclg2wUTGLoWV09alfJKudLT/WUrag==
+      JWT_ACCESS_EXPIRE: 40
+    ports:
+      - "9000:9000"
+
+  client:
+    build:
+      context: ../client
+      dockerfile: Dockerfile
+    container_name: kanban-client
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - "4000:80"
+
+volumes:
+  postgres_data:
+  redis_data:

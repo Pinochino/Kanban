@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Kanban, Bell, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, Kanban, Bell, LogOut, MessagesSquare } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
@@ -34,6 +34,7 @@ export function AdminSidebar() {
     { title: t("sidebar.accounts"), url: "/users", icon: Users },
     { title: t("sidebar.projects"), url: "/projects", icon: Kanban },
     { title: t("sidebar.notifications"), url: "/notifications", icon: Bell },
+    { title: t("sidebar.chat"), url: "/chat", icon: MessagesSquare },
   ];
 
   const dispatch = useAppDispatch();
