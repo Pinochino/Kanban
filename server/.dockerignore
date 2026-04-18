@@ -1,0 +1,9 @@
+target
+.mvn
+.idea
+.vscode
+.git
+.gitignore
+upload-dir
+Dockerfile
+docker-compose.yml

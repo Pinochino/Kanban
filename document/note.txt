@@ -1,0 +1,38 @@
+Tai lieu nhanh:
+
+1) Tong quan he thong:
+- README.md
+- system-overview.md
+
+2) Chay local:
+- local-setup.md
+
+3) Chay bang Docker:
+- docker-deployment.md
+
+4) API:
+- api-reference.md
+
+5) Xu ly loi:
+- troubleshooting.md
+
+6) Tai lieu nghiep vu/du lieu:
+- user-story.md
+- erd.md
+
+Cach chay docker nhanh:
+
+Mo terminal tai thu muc deploy
+Chay:
+docker compose up --build -d
+Xem log:
+docker compose logs -f
+Dung:
+docker compose down
+
+Port sau khi chay:
+
+Client: http://localhost:4000
+Server API: http://localhost:9000/api
+Postgres: localhost:5433
+Redis: localhost:6379
