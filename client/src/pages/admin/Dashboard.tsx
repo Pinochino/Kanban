@@ -5,6 +5,7 @@ import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 import { apiName } from "@/api/apiName";
 import { handleApi } from "@/api/handleApi";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useI18n } from "@/i18n/I18nProvider";
 
 type DashboardStats = {
   totalUsers: number;
@@ -55,99 +56,68 @@ const DashboardSkeleton = () => (
 );
 
 export default function AdminDashboard() {
-  const { data: stats, isLoading } = useQuery({
-    queryKey: ["admin-stats"],
+  const { t, language } = useI18n();
+
+  const { data: stats, isLoading, isError, error } = useQuery({
+    queryKey: ["admin-stats", language],
     queryFn: async (): Promise<DashboardStats> => {
-      const [usersCountRes, usersListRes, projectsRes, allTasksRes, todoRes, inProgressRes, reviewRes, doneRes] = await Promise.allSettled([
-        handleApi({ url: apiName.accounts.count, method: "GET", withCredentials: true }),
-        handleApi({
-          url: apiName.accounts.list,
-          method: "GET",
-          withCredentials: true,
-          params: { page: 0, size: 1000 },
-        }),
-        handleApi({ url: apiName.projects.list, method: "GET", withCredentials: true }),
-        handleApi({
-          url: apiName.tasks.search,
-          method: "GET",
-          withCredentials: true,
-          params: { page: 0, size: 1 },
-        }),
-        handleApi({
-          url: apiName.tasks.search,
-          method: "GET",
-          withCredentials: true,
-          params: { status: "to_do", page: 0, size: 1 },
-        }),
-        handleApi({
-          url: apiName.tasks.search,
-          method: "GET",
-          withCredentials: true,
-          params: { status: "in_progress", page: 0, size: 1 },
-        }),
-        handleApi({
-          url: apiName.tasks.search,
-          method: "GET",
-          withCredentials: true,
-          params: { status: "review", page: 0, size: 1 },
-        }),
-        handleApi({
-          url: apiName.tasks.search,
-          method: "GET",
-          withCredentials: true,
-          params: { status: "done", page: 0, size: 1 },
-        }),
-      ]);
+      const res = await handleApi({
+        url: apiName.dashboard.stats,
+        method: "GET",
+        withCredentials: true,
+      });
 
-      const usersCountData = usersCountRes.status === "fulfilled" ? usersCountRes.value.data?.data : null;
-      const usersListData = usersListRes.status === "fulfilled" ? usersListRes.value.data?.data : null;
-      const projectsData = projectsRes.status === "fulfilled" ? projectsRes.value.data?.data : null;
-      const allTasksData = allTasksRes.status === "fulfilled" ? allTasksRes.value.data?.data : null;
-      const todoData = todoRes.status === "fulfilled" ? todoRes.value.data?.data : null;
-      const inProgressData = inProgressRes.status === "fulfilled" ? inProgressRes.value.data?.data : null;
-      const reviewData = reviewRes.status === "fulfilled" ? reviewRes.value.data?.data : null;
-      const doneData = doneRes.status === "fulfilled" ? doneRes.value.data?.data : null;
-
-      const totalUsersFromCount = Number(usersCountData ?? 0);
-      const totalUsersFromList = Array.isArray(usersListData) ? usersListData.length : 0;
-      const totalUsers = totalUsersFromCount > 0 ? totalUsersFromCount : totalUsersFromList;
-
-      const totalProjects = Array.isArray(projectsData) ? projectsData.length : 0;
-      const totalTasks = Number(allTasksData?.totalElements ?? 0);
-      const todo = Number(todoData?.totalElements ?? 0);
-      const inProgress = Number(inProgressData?.totalElements ?? 0);
-      const review = Number(reviewData?.totalElements ?? 0);
-      const done = Number(doneData?.totalElements ?? 0);
+      const payload = res.data?.data;
 
       return {
-        totalUsers,
-        totalProjects,
-        totalTasks,
-        unfinishedTasks: Math.max(totalTasks - done, 0),
-        statusDistribution: [
-          { name: "To do", value: todo },
-          { name: "In progress", value: inProgress },
-          { name: "Review", value: review },
-          { name: "Done", value: done },
-        ],
+        totalUsers: Number(payload?.totalUsers ?? 0),
+        totalProjects: Number(payload?.totalProjects ?? 0),
+        totalTasks: Number(payload?.totalTasks ?? 0),
+        unfinishedTasks: Number(payload?.unfinishedTasks ?? 0),
+        statusDistribution: Array.isArray(payload?.statusDistribution)
+          ? payload.statusDistribution.map((item: { name: string; value: number }) => ({
+              name:
+                item.name === "To do"
+                  ? t("status.todo")
+                  : item.name === "In progress"
+                    ? t("status.inProgress")
+                    : item.name === "Review"
+                      ? t("status.review")
+                      : item.name === "Done"
+                        ? t("status.done")
+                        : item.name,
+              value: Number(item.value ?? 0),
+            }))
+          : [],
       };
     },
+    staleTime: 30_000,
   });
 
   const statCards = [
-    { title: "Tổng người dùng", value: stats?.totalUsers ?? 0, icon: Users, color: "text-primary" },
-    { title: "Tổng projects", value: stats?.totalProjects ?? 0, icon: Kanban, color: "text-emerald-600" },
-    { title: "Tổng tasks", value: stats?.totalTasks ?? 0, icon: CheckSquare, color: "text-amber-600" },
-    { title: "Tasks chưa hoàn thành", value: stats?.unfinishedTasks ?? 0, icon: PieChartIcon, color: "text-violet-600" },
+    { title: t("dashboard.users"), value: stats?.totalUsers ?? 0, icon: Users, color: "text-primary" },
+    { title: t("dashboard.projects"), value: stats?.totalProjects ?? 0, icon: Kanban, color: "text-emerald-600" },
+    { title: t("dashboard.tasks"), value: stats?.totalTasks ?? 0, icon: CheckSquare, color: "text-amber-600" },
+    { title: t("dashboard.unfinishedTasks"), value: stats?.unfinishedTasks ?? 0, icon: PieChartIcon, color: "text-violet-600" },
   ];
 
   if (isLoading) {
     return <DashboardSkeleton />;
   }
 
+  if (isError) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-sm text-destructive">
+          {t("dashboard.loadError")} {error instanceof Error ? error.message : t("dashboard.reloadHint")}
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Dashboard</h2>
+      <h2 className="text-2xl font-bold">{t("dashboard.title")}</h2>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((stat) => (
@@ -165,8 +135,8 @@ export default function AdminDashboard() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Phân bổ task theo trạng thái</CardTitle>
-          <CardDescription>Dữ liệu lấy trực tiếp từ backend.</CardDescription>
+          <CardTitle className="text-base">{t("dashboard.taskByStatus")}</CardTitle>
+          <CardDescription>{t("dashboard.backendData")}</CardDescription>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={320}>

@@ -18,6 +18,11 @@ import { Badge } from "@/components/ui/badge";
 import { FormEvent } from "react";
 import { IUser } from "@/types/UserInterface";
 
+type TaskDateErrors = {
+  dueDate?: string;
+  reminderDate?: string;
+};
+
 interface CreateTaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -26,6 +31,7 @@ interface CreateTaskDialogProps {
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   project?: IProject | null;
   columnLabel?: string;
+  dateErrors?: TaskDateErrors;
 }
 
 const CreateTaskDialog = ({
@@ -36,6 +42,7 @@ const CreateTaskDialog = ({
   onSubmit,
   project,
   columnLabel,
+  dateErrors,
 }: CreateTaskDialogProps) => {
   const { data: userList } = useGetAllData({ url: apiName.accounts.list });
 
@@ -103,7 +110,11 @@ const CreateTaskDialog = ({
                 type="date"
                 value={form.dueDate}
                 onChange={(event) => onFieldChange("dueDate", event.target.value)}
+                aria-invalid={Boolean(dateErrors?.dueDate)}
               />
+              {dateErrors?.dueDate ? (
+                <p className="text-xs text-destructive">{dateErrors.dueDate}</p>
+              ) : null}
             </div>
 
             <div className="space-y-2">
@@ -113,7 +124,11 @@ const CreateTaskDialog = ({
                 type="date"
                 value={form.reminderDate}
                 onChange={(event) => onFieldChange("reminderDate", event.target.value)}
+                aria-invalid={Boolean(dateErrors?.reminderDate)}
               />
+              {dateErrors?.reminderDate ? (
+                <p className="text-xs text-destructive">{dateErrors.reminderDate}</p>
+              ) : null}
             </div>
           </div>
 

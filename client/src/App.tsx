@@ -17,16 +17,18 @@ import ProjectManagement from "./pages/admin/ProjectManagement";
 import MyTasks from "./pages/MyTasks";
 import UserLayout from "./layouts/UserLayout";
 import TaskManagement from "./pages/admin/TaskManagement";
+import { I18nProvider } from "@/i18n/I18nProvider";
 
 const queryClient = new QueryClient();
 
 const App = () => (
     <GlobalProvider>
-        <QueryClientProvider client={queryClient}>
-            <TooltipProvider>
-                <Toaster/>
-                <Sonner/>
-                <BrowserRouter>
+        <I18nProvider>
+            <QueryClientProvider client={queryClient}>
+                <TooltipProvider>
+                    <Toaster/>
+                    <Sonner/>
+                    <BrowserRouter>
                     <Routes>
                         {/* PUBLIC ROUTE */}
                         <Route path="/auth" element={<Auth/>}/>
@@ -76,9 +78,10 @@ const App = () => (
                             }
                         />
                     </Routes>
-                </BrowserRouter>
-            </TooltipProvider>
-        </QueryClientProvider>
+                    </BrowserRouter>
+                </TooltipProvider>
+            </QueryClientProvider>
+        </I18nProvider>
     </GlobalProvider>
 );
 

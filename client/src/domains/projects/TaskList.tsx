@@ -51,6 +51,7 @@ import { IProject, IListTask, ITask } from "@/types/ProjectInterface";
 import { FormEvent } from "react";
 import useDebounce from "@/hooks/useDebounce";
 import { useMinVisibleLoading } from "@/hooks/useMinimumLoading";
+import { AxiosError } from "axios";
 
 interface TaskListProps {
   projectList: IProject[];
@@ -69,6 +70,11 @@ type TaskSearchPage = {
   size: number;
   hasNext: boolean;
   hasPrevious: boolean;
+};
+
+type TaskDateErrors = {
+  dueDate?: string;
+  reminderDate?: string;
 };
 
 const TASK_PAGE_SIZE_OPTIONS = [8, 12, 20, 40] as const;
@@ -125,6 +131,46 @@ const toApiDateTime = (value?: string) => {
   }
 
   return trimmed;
+};
+
+const validateTaskDates = (dueDate: string, reminderDate: string): TaskDateErrors => {
+  const errors: TaskDateErrors = {};
+
+  if (dueDate) {
+    const dueDateTime = new Date(`${dueDate}T00:00:00`);
+    if (Number.isNaN(dueDateTime.getTime()) || dueDateTime.getTime() <= Date.now()) {
+      errors.dueDate = "Due date must be in the future.";
+    }
+  }
+
+  if (dueDate && reminderDate) {
+    const dueDateTime = new Date(`${dueDate}T00:00:00`);
+    const reminderDateTime = new Date(`${reminderDate}T00:00:00`);
+
+    if (!Number.isNaN(dueDateTime.getTime()) && !Number.isNaN(reminderDateTime.getTime()) && reminderDateTime.getTime() > dueDateTime.getTime()) {
+      errors.reminderDate = "Reminder date must be before or equal to due date.";
+    }
+  }
+
+  return errors;
+};
+
+const extractApiErrorMessage = (error: unknown, fallback: string) => {
+  if (error instanceof AxiosError) {
+    const message = error.response?.data?.message;
+
+    if (typeof message === "string" && message.trim()) {
+      return message;
+    }
+
+    return error.message || fallback;
+  }
+
+  if (error instanceof Error) {
+    return error.message || fallback;
+  }
+
+  return fallback;
 };
 
 const buildTaskFromApi = (
@@ -210,7 +256,7 @@ const TaskBoardCard = ({
     <Card
       ref={setNodeRef}
       style={style}
-      className="w-full min-w-0 cursor-grab border bg-white/95 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing"
+      className="w-full min-w-0 cursor-grab border bg-card/95 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing"
       {...(canDrag ? { ...attributes, ...listeners } : {})}
       onClick={() => onOpenDetail(task)}
     >
@@ -229,7 +275,7 @@ const TaskBoardCard = ({
           {canDrag ? (
             <button
               type="button"
-              className="inline-flex h-6 w-6 items-center justify-center rounded border bg-white text-slate-500 hover:bg-slate-50"
+              className="inline-flex h-6 w-6 items-center justify-center rounded border border-border/70 bg-background text-muted-foreground hover:bg-muted"
               onClick={(event) => event.stopPropagation()}
             >
               <GripVertical className="h-3.5 w-3.5" />
@@ -355,7 +401,7 @@ const TaskBoardColumn = ({
         </SortableContext>
 
         {tasks.length === 0 ? (
-          <div className="rounded-md border border-dashed bg-white/70 p-4 text-center text-sm text-muted-foreground">
+          <div className="rounded-md border border-dashed bg-muted/30 p-4 text-center text-sm text-muted-foreground dark:bg-muted/20">
             Không có task trong cột này.
           </div>
         ) : null}
@@ -374,7 +420,7 @@ const SprintBoardLoading = () => (
         </CardHeader>
         <CardContent className="space-y-3 p-3">
           {Array.from({ length: 3 }).map((_, cardIndex) => (
-            <div key={cardIndex} className="space-y-2 rounded-md border bg-white/90 p-3">
+            <div key={cardIndex} className="space-y-2 rounded-md border bg-card/90 p-3 dark:bg-card/80">
               <Skeleton className="h-4 w-3/4" />
               <Skeleton className="h-3 w-1/3" />
               <Skeleton className="h-12 w-full" />
@@ -387,7 +433,7 @@ const SprintBoardLoading = () => (
 );
 
 const SprintTableLoading = () => (
-  <div className="overflow-x-auto rounded-md border p-2">
+  <div className="overflow-x-auto rounded-md border border-border/70 bg-card/80 p-2">
     <div className="space-y-2">
       {Array.from({ length: 8 }).map((_, rowIndex) => (
         <div key={rowIndex} className="grid grid-cols-8 gap-2 rounded-md border p-2">
@@ -425,6 +471,7 @@ const TaskList = ({
   const [createTaskListTaskId, setCreateTaskListTaskId] = useState<string>("");
   const [createTaskColumnLabel, setCreateTaskColumnLabel] = useState<string>("");
   const [taskForm, setTaskForm] = useState<ICreateTask>(defaultNewTask);
+  const [taskFormErrors, setTaskFormErrors] = useState<TaskDateErrors>({});
   const [boardTasks, setBoardTasks] = useState<Task[]>([]);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const debouncedSearch = useDebounce({ value: search, delay: 400 });
@@ -617,6 +664,10 @@ const TaskList = ({
       setCreateTaskProjectId("");
       setCreateTaskListTaskId("");
       setCreateTaskColumnLabel("");
+      setTaskFormErrors({});
+    },
+    onError: (error) => {
+      toast.error(extractApiErrorMessage(error, "Tạo task thất bại"));
     },
   });
 
@@ -647,10 +698,18 @@ const TaskList = ({
   };
 
   const handleFieldChange = (field: keyof ICreateTask, value: string) => {
-    setTaskForm((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setTaskForm((prev) => {
+      const nextForm = {
+        ...prev,
+        [field]: value,
+      };
+
+      if (field === "dueDate" || field === "reminderDate") {
+        setTaskFormErrors(validateTaskDates(nextForm.dueDate, nextForm.reminderDate));
+      }
+
+      return nextForm;
+    });
   };
 
   const handleCreateTask = async (event: FormEvent<HTMLFormElement>) => {
@@ -658,6 +717,14 @@ const TaskList = ({
 
     if (!taskForm.projectId || !taskForm.listTaskId) {
       toast.error("Thiếu project hoặc cột trạng thái");
+      return;
+    }
+
+    const dateErrors = validateTaskDates(taskForm.dueDate, taskForm.reminderDate);
+    setTaskFormErrors(dateErrors);
+
+    if (Object.keys(dateErrors).length > 0) {
+      toast.error("Vui lòng kiểm tra lại ngày due date và reminder date.");
       return;
     }
 
@@ -1070,7 +1137,7 @@ const TaskList = ({
         )}
       </CardContent>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-slate-50/70 px-3 py-2 text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/70 bg-muted/30 px-3 py-2 text-sm dark:bg-card/70">
         <span className="text-muted-foreground">
           Hiển thị {totalTasks === 0 ? 0 : pageStart + 1}-{pageEnd} / {totalTasks} task
         </span>
@@ -1130,6 +1197,7 @@ const TaskList = ({
           onSubmit={handleCreateTask}
           project={boardProject}
           columnLabel={createTaskColumnLabel}
+          dateErrors={taskFormErrors}
         />
       ) : null}
 

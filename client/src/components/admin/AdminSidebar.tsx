@@ -20,19 +20,21 @@ import { useAppDispatch } from "@/store/hooks";
 import authService from "@/services/AuthService";
 import { toast } from "../ui/sonner";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-
-const menuItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Accounts", url: "/users", icon: Users },
-  { title: "Projects", url: "/projects", icon: Kanban },
-  { title: "Notifications", url: "/notifications", icon: Bell },
-];
+import { useI18n } from "@/i18n/I18nProvider";
 
 export function AdminSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
   const { user } = useCurrentUser();
+  const { t } = useI18n();
+
+  const menuItems = [
+    { title: t("sidebar.dashboard"), url: "/", icon: LayoutDashboard },
+    { title: t("sidebar.accounts"), url: "/users", icon: Users },
+    { title: t("sidebar.projects"), url: "/projects", icon: Kanban },
+    { title: t("sidebar.notifications"), url: "/notifications", icon: Bell },
+  ];
 
   const dispatch = useAppDispatch();
 
@@ -42,12 +44,12 @@ export function AdminSidebar() {
       await dispatch(authService.logout());
 
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Đăng xuất thất bại";
+      const message = error instanceof Error ? error.message : t("common.logoutFailed");
       toast.error(message)
     }
   }
 
-  const displayName = user?.username?.trim() || "Administrator";
+  const displayName = user?.username?.trim() || t("common.admin");
   const displayAvatar = user?.avatarUrl || "";
 
   const getInitials = (name: string) => {
@@ -75,13 +77,13 @@ export function AdminSidebar() {
           <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary text-primary-foreground shrink-0">
             <Kanban className="h-4 w-4" />
           </div>
-          {!collapsed && <span className="font-bold text-lg">TaskFlow Admin</span>}
+          {!collapsed && <span className="font-bold text-lg">{t("sidebar.adminTitle")}</span>}
         </div>
       </SidebarHeader>
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Quản trị</SidebarGroupLabel>
+          <SidebarGroupLabel>{t("common.admin")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
@@ -111,7 +113,7 @@ export function AdminSidebar() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{displayName}</p>
               <p className="text-xs text-muted-foreground truncate">
-                {user?.email || "Administrator"}
+                {user?.email || t("common.admin")}
               </p>
             </div>
           )}

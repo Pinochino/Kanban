@@ -21,8 +21,7 @@ import authService from "@/services/AuthService";
 import { useAppDispatch } from "@/store/hooks";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
-
-const menuItems = [{ title: "Task của tôi", url: "/my-tasks", icon: LayoutList }];
+import { useI18n } from "@/i18n/I18nProvider";
 
 export function UserSidebar() {
   const { state } = useSidebar();
@@ -30,12 +29,15 @@ export function UserSidebar() {
   const location = useLocation();
   const dispatch = useAppDispatch();
   const { user } = useCurrentUser();
+  const { t } = useI18n();
+
+  const menuItems = [{ title: t("sidebar.myTasks"), url: "/my-tasks", icon: LayoutList }];
 
   const signOut = async () => {
     try {
       await dispatch(authService.logout());
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Logout failed");
+      toast.error(error instanceof Error ? error.message : t("common.logoutFailed"));
     }
   };
 
@@ -54,7 +56,7 @@ export function UserSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Workspace</SidebarGroupLabel>
+          <SidebarGroupLabel>{t("sidebar.workspace")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
@@ -87,7 +89,7 @@ export function UserSidebar() {
           {!collapsed && (
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">{user?.username || "User"}</p>
-              <p className="text-xs text-muted-foreground">Personal workspace</p>
+              <p className="text-xs text-muted-foreground">{t("sidebar.personalWorkspace")}</p>
             </div>
           )}
           {!collapsed && (

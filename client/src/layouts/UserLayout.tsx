@@ -1,11 +1,13 @@
 import { Outlet } from "react-router-dom";
 import type { ReactNode } from "react";
 
+import { LanguageToggle } from "@/components/ui/language-toggle";
 import { ModeToggle } from "@/components/ui/mode-toggle";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { UserSidebar } from "@/components/user/UserSidebar";
 import RoutePageSkeleton from "@/components/common/RoutePageSkeleton";
 import { useRouteTransitionLoading } from "@/hooks/useRouteTransitionLoading";
+import { useI18n } from "@/i18n/I18nProvider";
 
 type UserLayoutProps = {
   children?: ReactNode;
@@ -13,6 +15,7 @@ type UserLayoutProps = {
 
 export default function UserLayout({ children }: UserLayoutProps) {
   const isTransitionLoading = useRouteTransitionLoading(1000);
+  const { t } = useI18n();
 
   return (
     <SidebarProvider>
@@ -25,9 +28,9 @@ export default function UserLayout({ children }: UserLayoutProps) {
                 <SidebarTrigger className="h-9 w-9 rounded-full border border-border/70 bg-card/80 shadow-sm transition-colors hover:bg-accent" />
                 <div className="hidden sm:block">
                   <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-muted-foreground">
-                    Workspace
+                    {t("layout.workspace")}
                   </p>
-                  <h1 className="text-lg font-semibold text-foreground">My Workspace</h1>
+                  <h1 className="text-lg font-semibold text-foreground">{t("layout.myWorkspace")}</h1>
                 </div>
               </div>
 
@@ -38,9 +41,10 @@ export default function UserLayout({ children }: UserLayoutProps) {
                     <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-sky-500" />
                   </span>
                   <span className="text-xs font-medium text-muted-foreground">
-                    Personal workspace
+                    {t("sidebar.personalWorkspace")}
                   </span>
                 </div>
+                <LanguageToggle />
                 <ModeToggle />
               </div>
             </div>

@@ -37,6 +37,10 @@ export const apiName = {
         updateStatus: "/tasks/update-status",
     },
 
+    dashboard: {
+        stats: "/dashboard/stats",
+    },
+
     labels: {
         list: "/labels/list",
         create: "/labels/create",

@@ -26,6 +26,12 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
 
     long countByListTask(ListTask listTask);
 
+    @Query("select count(t) from Task t")
+    long countAllTasks();
+
+    @Query("select count(t) from Task t join t.listTask lt where lt.status = :status")
+    long countTasksByStatus(@Param("status") ListTaskStatus status);
+
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("update Task t set t.assignedAccount = null where t.assignedAccount.id = :accountId")
     int clearAssignedAccountByAccountId(@Param("accountId") Long accountId);

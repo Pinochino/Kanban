@@ -122,22 +122,22 @@ const ProjectManagement = () => {
 
   return (
     <div className="space-y-6">
-      <Card className="border-0 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 text-white shadow-xl">
+      <Card className="border border-border/70 bg-gradient-to-r from-background via-muted/50 to-card text-foreground shadow-lg">
         <CardContent className="flex flex-col gap-4 p-6 md:flex-row md:items-end md:justify-between">
           <div className="space-y-2">
-            <p className="inline-flex items-center gap-2 text-sm text-slate-200">
+            <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
               <Sparkles className="h-4 w-4" />
               Project control center
             </p>
             <h1 className="text-2xl font-semibold md:text-3xl">Project Management</h1>
-            <p className="max-w-2xl text-sm text-slate-200">
+            <p className="max-w-2xl text-sm text-muted-foreground">
               Trang này chỉ quản lý project. Nhấn vào từng project để mở trang task riêng theo project đó.
             </p>
           </div>
 
           <Dialog open={isCreateProjectDialogOpen} onOpenChange={setIsCreateProjectDialogOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" className="bg-white text-slate-900 hover:bg-slate-100">
+                <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
                 <Plus className="h-4 w-4" />
                 Create project
               </Button>
@@ -169,7 +169,7 @@ const ProjectManagement = () => {
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">Overall progress</p>
             <p className="text-2xl font-semibold">{projectStats.completionRate}%</p>
-            <div className="mt-2 h-2 rounded-full bg-slate-200">
+            <div className="mt-2 h-2 rounded-full bg-muted">
               <div
                 className="h-2 rounded-full bg-emerald-500"
                 style={{ width: `${projectStats.completionRate}%` }}
