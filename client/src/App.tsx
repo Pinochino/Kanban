@@ -10,14 +10,13 @@ import AdminLayout from "./layouts/AdminLayout";
 import AdminDashboard from "./pages/admin/Dashboard";
 import UserManagement from "./pages/admin/UserManagement";
 import SoftDeletedUsers from "./pages/admin/SoftDeletedUsers";
-import Moderation from "./pages/admin/Moderation";
 import NotificationControl from "./pages/admin/NotificationControl";
 import GlobalProvider from "./hooks/providers/GlobalProvider";
 import {AuthProvider} from "./hooks/providers/AuthProvider";
 import ProjectManagement from "./pages/admin/ProjectManagement";
-import TaskManagement from "./pages/admin/TaskManagement";
 import MyTasks from "./pages/MyTasks";
 import UserLayout from "./layouts/UserLayout";
+import TaskManagement from "./pages/admin/TaskManagement";
 
 const queryClient = new QueryClient();
 
@@ -57,8 +56,6 @@ const App = () => (
                                             <Route path="users/deleted" element={<SoftDeletedUsers/>}/>
                                             <Route path="projects" element={<ProjectManagement/>}/>
                                             <Route path="projects/:projectId/tasks" element={<TaskManagement/>}/>
-                                            <Route path="tasks" element={<TaskManagement/>}/>
-                                            <Route path="moderation" element={<Moderation/>}/>
                                             <Route path="notifications" element={<NotificationControl/>}/>
                                         </Route>
 

@@ -20,6 +20,8 @@ public class AccountResponse {
 
     String email;
 
+    String avatarUrl;
+
     boolean isLogin;
 
     boolean isActive;

@@ -54,7 +54,7 @@ const UserStatistics = ({ userList }: { userList: IUser[] }) => {
             >
               <Link to="/users/deleted">
                 <ArchiveRestore className="mr-1 h-4 w-4" />
-                User đã xóa mềm
+                Accounts đã xóa mềm
               </Link>
             </Button>
             <Badge

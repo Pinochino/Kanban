@@ -2,20 +2,40 @@ import { Outlet } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { ModeToggle } from "@/components/ui/mode-toggle";
+import RoutePageSkeleton from "@/components/common/RoutePageSkeleton";
+import { useRouteTransitionLoading } from "@/hooks/useRouteTransitionLoading";
+import { cn } from "@/lib/utils";
 
 export default function AdminLayout() {
+  const isTransitionLoading = useRouteTransitionLoading(1000);
+
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full">
+      <div className="flex min-h-screen w-full bg-background">
         <AdminSidebar />
-        <div className="flex-1 flex flex-col">
-          <header className="h-14 flex items-center border-b bg-card px-4 gap-4 justify-between">
-            <SidebarTrigger />
-            <h1 className="text-lg font-semibold text-foreground">Admin Panel</h1>
-            <ModeToggle />
+        <div className="flex flex-1 flex-col bg-gradient-to-b from-background via-background to-muted/20">
+          <header className={cn(
+            "sticky top-0 z-20 border-b border-border/70",
+            "bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70",
+          )}>
+            <div className="flex h-16 items-center justify-between gap-4 px-4 lg:px-6">
+              <div className="flex items-center gap-3">
+                <SidebarTrigger className="h-9 w-9 rounded-full border border-border/70 bg-card/80 shadow-sm transition-colors hover:bg-accent" />
+                <div className="hidden sm:block">
+                  <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-muted-foreground">
+                    Admin workspace
+                  </p>
+                  <h1 className="text-lg font-semibold text-foreground">Dashboard Overview</h1>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <ModeToggle />
+              </div>
+            </div>
           </header>
-          <main className="flex-1 p-6 overflow-auto">
-            <Outlet />
+          <main className="flex-1 overflow-auto p-4 lg:p-6">
+            {isTransitionLoading ? <RoutePageSkeleton /> : <Outlet />}
           </main>
         </div>
       </div>

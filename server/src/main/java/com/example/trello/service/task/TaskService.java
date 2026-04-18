@@ -1,6 +1,7 @@
 package com.example.trello.service.task;
 
 import com.example.trello.dto.request.TaskRequest;
+import com.example.trello.dto.response.PagedResponse;
 import com.example.trello.dto.response.TaskResponse;
 import jakarta.transaction.Transactional;
 
@@ -15,6 +16,15 @@ public interface TaskService {
     List<TaskResponse> getTasks(
             Long assignedAccountId,
             Long listTaskId
+    );
+
+    PagedResponse<TaskResponse> searchTasks(
+            String status,
+            String keyword,
+            Long projectId,
+            Long assignedAccountId,
+            int page,
+            int size
     );
 
     TaskResponse getTask(

@@ -1,7 +1,6 @@
-import { LayoutDashboard, Users, Kanban, Shield, Bell, LogOut, ListChecks } from "lucide-react";
+import { LayoutDashboard, Users, Kanban, Bell, LogOut } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useLocation, useNavigate } from "react-router-dom";
-// import { useAuth } from "@/hooks/useAuth";
+import { useLocation } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -16,43 +15,53 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAppDispatch } from "@/store/hooks";
-import { useState } from "react";
 import authService from "@/services/AuthService";
 import { toast } from "../ui/sonner";
-import { getAccessToken } from "@/utils/JwtUtils";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 const menuItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Người dùng", url: "/users", icon: Users },
+  { title: "Accounts", url: "/users", icon: Users },
   { title: "Projects", url: "/projects", icon: Kanban },
-  { title: "Tasks", url: "/tasks", icon: ListChecks },
-  { title: "Kiểm duyệt", url: "/moderation", icon: Shield },
-  { title: "Thông báo", url: "/notifications", icon: Bell },
+  { title: "Notifications", url: "/notifications", icon: Bell },
 ];
 
 export function AdminSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
-  // const { profile, signOut } = useAuth();
+  const { user } = useCurrentUser();
 
   const dispatch = useAppDispatch();
-  const [loading, setLoading] = useState<boolean>(false);
-  const navigate = useNavigate();
 
   const signOut = async () => {
     try {
 
       await dispatch(authService.logout());
 
-      // navigate("/auth");
-
     } catch (error) {
-      toast.error(error.message)
+      const message = error instanceof Error ? error.message : "Đăng xuất thất bại";
+      toast.error(message)
     }
   }
+
+  const displayName = user?.username?.trim() || "Administrator";
+  const displayAvatar = user?.avatarUrl || "";
+
+  const getInitials = (name: string) => {
+    const parts = name.split(" ").filter(Boolean);
+
+    if (parts.length === 0) {
+      return "AD";
+    }
+
+    return parts
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join("");
+  };
 
   const isActive = (path: string) => {
     if (path === "/") return location.pathname === "/";
@@ -93,14 +102,17 @@ export function AdminSidebar() {
       <SidebarFooter className="border-t border-sidebar-border pt-4">
         <div className="flex items-center gap-2 px-2">
           <Avatar className="h-8 w-8 shrink-0">
+            <AvatarImage src={displayAvatar} alt={displayName} />
             <AvatarFallback className="bg-primary/10 text-primary text-xs">
-              {/* {profile?.full_name?.charAt(0)?.toUpperCase() || "A"} */}
+              {getInitials(displayName)}
             </AvatarFallback>
           </Avatar>
           {!collapsed && (
             <div className="flex-1 min-w-0">
-              {/* <p className="text-sm font-medium truncate">{profile?.full_name || "Admin"}</p> */}
-              <p className="text-xs text-muted-foreground">Administrator</p>
+              <p className="text-sm font-medium truncate">{displayName}</p>
+              <p className="text-xs text-muted-foreground truncate">
+                {user?.email || "Administrator"}
+              </p>
             </div>
           )}
           {!collapsed && (

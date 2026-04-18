@@ -1,6 +1,5 @@
 import { getAccessToken, setAccessToken } from '@/utils/JwtUtils';
 import axios from 'axios';
-import { error } from 'console';
 
 const axiosClient = axios.create({
     baseURL: 'http://localhost:9000/api',
@@ -17,8 +16,6 @@ axiosClient.interceptors.request.use(function (config) {
     if (token) {
         config.headers.Authorization = `Bearer ${token}`
     }
-
-    console.log("access token: ", token)
 
     return config;
 }, function (error) {
@@ -44,8 +41,13 @@ axiosClient.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
+        const requestUrl = String(originalRequest?.url ?? "");
+        const isAuthEndpoint = requestUrl.includes("/auth/login")
+            || requestUrl.includes("/auth/register")
+            || requestUrl.includes("/auth/refresh-token")
+            || requestUrl.includes("/auth/logout");
 
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
             if (isRefreshing) {
                 return new Promise((resolve, reject) => {
                     failedQueue.push({ resolve, reject });
@@ -76,6 +78,10 @@ axiosClient.interceptors.response.use(
                 return axiosClient(originalRequest);
             } catch (err) {
                 processQueue(err, null);
+                setAccessToken(null);
+                if (typeof window !== "undefined") {
+                    window.dispatchEvent(new Event("auth:session-expired"));
+                }
                 return Promise.reject(err);
             } finally {
                 isRefreshing = false;

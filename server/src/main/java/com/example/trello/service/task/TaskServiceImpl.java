@@ -1,8 +1,10 @@
 package com.example.trello.service.task;
 
 import com.example.trello.constants.ErrorCode;
+import com.example.trello.constants.ListTaskStatus;
 import com.example.trello.constants.RoleName;
 import com.example.trello.dto.request.TaskRequest;
+import com.example.trello.dto.response.PagedResponse;
 import com.example.trello.dto.response.TaskResponse;
 import com.example.trello.exception.AppError;
 import com.example.trello.mapper.TaskMapper;
@@ -18,12 +20,18 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.Comparator;
+import java.util.Locale;
 import java.util.Objects;
 
 @Service
@@ -43,6 +51,8 @@ public class TaskServiceImpl implements TaskService {
     public TaskResponse createTask(
             TaskRequest taskRequest
     ) {
+        validateTaskSchedule(taskRequest);
+
         Optional<Task> task = taskRepository.findByTitle(taskRequest.getTitle());
 
         if (task.isPresent()) {
@@ -82,6 +92,48 @@ public class TaskServiceImpl implements TaskService {
                 .map(taskMapper::toTaskResponse)
                 .collect(Collectors.toList());
     }
+
+        @Override
+        public PagedResponse<TaskResponse> searchTasks(String status, String keyword, Long projectId, Long assignedAccountId, int page, int size) {
+                ListTaskStatus normalizedStatus = parseStatus(status);
+                int validatedPage = Math.max(page, 0);
+                int validatedSize = Math.min(Math.max(size, 1), 100);
+
+                Pageable pageable = PageRequest.of(validatedPage, validatedSize,
+                                Sort.by(Sort.Order.asc("orderIndex"), Sort.Order.asc("id")));
+
+                Page<Task> taskPage = taskRepository.searchTasks(normalizedStatus, keyword, projectId, assignedAccountId, pageable);
+                List<TaskResponse> items = taskPage.getContent().stream()
+                                .map(taskMapper::toTaskResponse)
+                                .collect(Collectors.toList());
+
+                return PagedResponse.<TaskResponse>builder()
+                                .items(items)
+                                .totalElements(taskPage.getTotalElements())
+                                .totalPages(taskPage.getTotalPages())
+                                .page(taskPage.getNumber())
+                                .size(taskPage.getSize())
+                                .hasNext(taskPage.hasNext())
+                                .hasPrevious(taskPage.hasPrevious())
+                                .build();
+        }
+
+        private ListTaskStatus parseStatus(String status) {
+                if (status == null || status.trim().isEmpty()) {
+                        return null;
+                }
+
+                String normalized = status.trim().toUpperCase(Locale.ROOT).replace('-', '_');
+                if ("TODO".equals(normalized)) {
+                        normalized = "TO_DO";
+                }
+
+                try {
+                        return ListTaskStatus.valueOf(normalized);
+                } catch (IllegalArgumentException exception) {
+                        return null;
+                }
+        }
 
     @Override
     public TaskResponse getTask(
@@ -139,6 +191,8 @@ public class TaskServiceImpl implements TaskService {
     public TaskResponse updateTask(
             Long taskId,
             TaskRequest taskRequest) {
+
+        validateTaskSchedule(taskRequest);
 
         Task task = taskRepository
                 .findById(taskId)
@@ -210,6 +264,24 @@ public class TaskServiceImpl implements TaskService {
                         .thenComparing(task -> task.getId() == null ? Long.MAX_VALUE : task.getId()))
                 .toList();
     }
+
+        private void validateTaskSchedule(TaskRequest taskRequest) {
+                LocalDateTime now = LocalDateTime.now();
+                LocalDateTime dueDate = taskRequest.getDueDate();
+                LocalDateTime reminderDate = taskRequest.getReminderDate();
+
+                if (dueDate != null && !dueDate.isAfter(now)) {
+                        throw new AppError(ErrorCode.TASK_DUE_DATE_INVALID);
+                }
+
+                if (reminderDate != null && !reminderDate.isAfter(now)) {
+                        throw new AppError(ErrorCode.TASK_REMINDER_DATE_INVALID);
+                }
+
+                if (reminderDate != null && dueDate != null && reminderDate.isAfter(dueDate)) {
+                        throw new AppError(ErrorCode.TASK_REMINDER_AFTER_DUE_INVALID);
+                }
+        }
 
 
 }

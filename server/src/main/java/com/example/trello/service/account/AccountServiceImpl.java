@@ -9,7 +9,12 @@ import com.example.trello.mapper.AccountMapper;
 import com.example.trello.model.Account;
 import com.example.trello.model.Role;
 import com.example.trello.repository.AccountRepository;
+import com.example.trello.repository.CommentRepository;
+import com.example.trello.repository.ProjectMemberRepository;
 import com.example.trello.repository.RoleRepository;
+import com.example.trello.repository.TaskActivityRepository;
+import com.example.trello.repository.TaskRepository;
+import com.example.trello.service.cloudinary.CloudinaryService;
 import com.example.trello.specifications.AccountSpecifications;
 import com.example.trello.specifications.filter.AccountFilter;
 import jakarta.transaction.Transactional;
@@ -25,6 +30,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -39,6 +45,11 @@ public class AccountServiceImpl implements AccountService {
     AccountMapper accountMapper;
     RoleRepository roleRepository;
     PasswordEncoder passwordEncoder;
+    TaskRepository taskRepository;
+    CommentRepository commentRepository;
+    ProjectMemberRepository projectMemberRepository;
+    TaskActivityRepository taskActivityRepository;
+    CloudinaryService cloudinaryService;
 
     @Override
     public List<AccountResponse> getAccounts(AccountFilter request) {
@@ -71,6 +82,13 @@ public class AccountServiceImpl implements AccountService {
     @Override
     public void deleteAccount(Long id) {
         Account account = accountRepository.findById(id).orElseThrow(() -> new AppError(ErrorCode.USER_NOT_FOUND));
+
+        // Remove dependent references first to avoid FK constraint violations.
+        taskRepository.clearAssignedAccountByAccountId(id);
+        commentRepository.deleteByAccountId(id);
+        projectMemberRepository.deleteByAccountId(id);
+        taskActivityRepository.deleteByAccountId(id);
+
         accountRepository.delete(account);
     }
 
@@ -170,6 +188,38 @@ public class AccountServiceImpl implements AccountService {
         oldAccount = accountRepository.save(oldAccount);
 
         return accountMapper.toResponse(oldAccount);
+    }
+
+    @Transactional
+    @Override
+    public AccountResponse updateAccountProfile(Long accountId, UpdateAccountRequest request, MultipartFile avatarFile) {
+        Account account = accountRepository
+                .findById(accountId)
+                .orElseThrow(() -> new AppError(ErrorCode.USER_NOT_FOUND));
+
+        if (request != null) {
+            if (StringUtils.hasText(request.getUsername())) {
+                account.setUsername(request.getUsername().trim());
+            }
+
+            if (StringUtils.hasText(request.getEmail())) {
+                account.setEmail(request.getEmail().trim());
+            }
+
+            if (StringUtils.hasText(request.getPassword())) {
+                account.setPassword(passwordEncoder.encode(request.getPassword().trim()));
+            }
+        }
+
+        if (avatarFile != null && !avatarFile.isEmpty()) {
+            String oldAvatarUrl = account.getAvatarUrl();
+            String newAvatarUrl = cloudinaryService.uploadAvatar(avatarFile, accountId);
+            account.setAvatarUrl(newAvatarUrl);
+            cloudinaryService.deleteByUrl(oldAvatarUrl);
+        }
+
+        account = accountRepository.save(account);
+        return accountMapper.toResponse(account);
     }
 
 

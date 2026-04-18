@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -76,6 +77,16 @@ public class AccountController {
                                                                       @Valid @RequestBody UpdateAccountRequest request) {
         AccountResponse accountResponse = accountService.updateAccount(accountId, request);
         return ResponseEntity.ok().body(new AppResponse<>(200, "Update account successfully", accountResponse));
+    }
+
+    @PatchMapping(value = "/update-profile/{accountId}", consumes = {"multipart/form-data"})
+    public ResponseEntity<AppResponse<AccountResponse>> updateAccountProfile(
+            @PathVariable Long accountId,
+            @ModelAttribute UpdateAccountRequest request,
+            @RequestPart(value = "avatar", required = false) MultipartFile avatarFile) {
+
+        AccountResponse accountResponse = accountService.updateAccountProfile(accountId, request, avatarFile);
+        return ResponseEntity.ok().body(new AppResponse<>(200, "Update profile successfully", accountResponse));
     }
 
 

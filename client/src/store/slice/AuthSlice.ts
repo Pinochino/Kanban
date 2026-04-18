@@ -29,7 +29,25 @@ const initialState: AuthState = {
 const authSlice = createGenericSlice({
     name: "auth",
     initialState: initialState,
-    reducers: {},
+    reducers: {
+        resetAuthState: (state) => {
+            state.login = {
+                status: "idle",
+                data: null,
+                error: null,
+            };
+            state.register = {
+                status: "idle",
+                data: null,
+                error: null,
+            };
+            state.logout = {
+                status: "idle",
+                data: null,
+                error: null,
+            };
+        },
+    },
     extraReducers: (builder) => {
         builder
             .addCase(authService.login.pending, (state) => {
@@ -71,4 +89,5 @@ const authSlice = createGenericSlice({
     },
 });
 
+export const { resetAuthState } = authSlice.actions;
 export const authReducer = authSlice.reducer;

@@ -40,6 +40,12 @@ public enum ErrorCode {
     TASK_NOT_FOUND(116, "Task Not Found", HttpStatus.NOT_FOUND),
     TASK_ALREADY_EXIST(117, "Task already exist", HttpStatus.CONFLICT),
     TASK_AUTHORIZED(123, "You don't have permission to update this task", HttpStatus.FORBIDDEN),
+    TASK_DUE_DATE_INVALID(124, "Due date must be in the future", HttpStatus.BAD_REQUEST),
+    TASK_REMINDER_DATE_INVALID(125, "Reminder date must be in the future", HttpStatus.BAD_REQUEST),
+    TASK_REMINDER_AFTER_DUE_INVALID(126, "Reminder date must be before or equal to due date", HttpStatus.BAD_REQUEST),
+    AVATAR_FILE_REQUIRED(127, "Avatar file is required", HttpStatus.BAD_REQUEST),
+    AVATAR_INVALID_FILE_TYPE(128, "Avatar file must be an image", HttpStatus.BAD_REQUEST),
+    AVATAR_UPLOAD_FAILED(129, "Avatar upload failed", HttpStatus.INTERNAL_SERVER_ERROR),
 
 
     //    LIST_TASK

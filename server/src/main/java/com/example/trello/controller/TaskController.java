@@ -2,6 +2,7 @@ package com.example.trello.controller;
 
 import com.example.trello.dto.request.TaskRequest;
 import com.example.trello.dto.response.AppResponse;
+import com.example.trello.dto.response.PagedResponse;
 import com.example.trello.dto.response.TaskResponse;
 import com.example.trello.service.task.TaskService;
 import jakarta.validation.Valid;
@@ -31,6 +32,19 @@ public class TaskController {
     ) {
         List<TaskResponse> tasks = taskService.getTasks(assignedAccountId, listTaskId);
         return ResponseEntity.ok().body(new AppResponse<>(200, "Get tasks success", tasks));
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<AppResponse<PagedResponse<TaskResponse>>> searchTasks(
+            @RequestParam(value = "status", required = false) String status,
+            @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "projectId", required = false) Long projectId,
+            @RequestParam(value = "assignedAccountId", required = false) Long assignedAccountId,
+            @RequestParam(value = "page", defaultValue = "0", required = false) int page,
+            @RequestParam(value = "size", defaultValue = "12", required = false) int size
+    ) {
+        PagedResponse<TaskResponse> tasks = taskService.searchTasks(status, keyword, projectId, assignedAccountId, page, size);
+        return ResponseEntity.ok().body(new AppResponse<>(200, "Search tasks success", tasks));
     }
 
     @GetMapping("/detail/{taskId}")

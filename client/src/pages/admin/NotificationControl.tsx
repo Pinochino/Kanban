@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,24 +11,24 @@ export default function NotificationControl() {
   const [filter, setFilter] = useState<string>("all");
   const queryClient = useQueryClient();
 
-  const { data: logs, isLoading } = useQuery({
-    queryKey: ["admin-notification-logs", filter],
-    queryFn: async () => {
-      let query = supabase.from("notification_logs").select("*, profiles!notification_logs_user_id_fkey(full_name)").order("created_at", { ascending: false }).limit(100);
-      if (filter !== "all") query = query.eq("status", filter as "sent" | "failed" | "pending");
-      const { data } = await query;
-      return data || [];
-    },
-  });
+  // const { data: logs, isLoading } = useQuery({
+  //   queryKey: ["admin-notification-logs", filter],
+  //   queryFn: async () => {
+  //     let query = supabase.from("notification_logs").select("*, profiles!notification_logs_user_id_fkey(full_name)").order("created_at", { ascending: false }).limit(100);
+  //     if (filter !== "all") query = query.eq("status", filter as "sent" | "failed" | "pending");
+  //     const { data } = await query;
+  //     return data || [];
+  //   },
+  // });
 
-  const retry = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("notification_logs").update({ status: "pending", retry_count: 0 }).eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["admin-notification-logs"] }); toast.success("Đã retry!"); },
-    onError: (err: Error) => toast.error(err.message),
-  });
+  // const retry = useMutation({
+  //   mutationFn: async (id: string) => {
+  //     const { error } = await supabase.from("notification_logs").update({ status: "pending", retry_count: 0 }).eq("id", id);
+  //     if (error) throw error;
+  //   },
+  //   onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["admin-notification-logs"] }); toast.success("Đã retry!"); },
+  //   onError: (err: Error) => toast.error(err.message),
+  // });
 
   const statusBadge = (status: string) => {
     switch (status) {
@@ -42,7 +41,8 @@ export default function NotificationControl() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      Notification
+      {/* <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Quản lý thông báo</h2>
         <Select value={filter} onValueChange={setFilter}>
           <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
@@ -92,7 +92,7 @@ export default function NotificationControl() {
             ))}
           </TableBody>
         </Table>
-      </div>
+      </div> */}
     </div>
   );
 }

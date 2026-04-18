@@ -17,6 +17,7 @@ export const apiName = {
         count: "/accounts/count",
         listSoftDelete: "/accounts/soft-delete/list",
         update: '/accounts/update',
+        updateProfile: '/accounts/update-profile',
         
         
     },
@@ -29,6 +30,7 @@ export const apiName = {
 
     tasks: {
         list: "/tasks/list",
+        search: "/tasks/search",
         detail: "/tasks/detail",
         create: "/tasks/create",
         update: "/tasks/update",

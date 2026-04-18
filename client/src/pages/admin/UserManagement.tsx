@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -39,7 +40,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Search, Trash2, Pencil, CircleArrowOutUpRight } from "lucide-react";
+import { Search, Trash2, Pencil, CircleArrowOutUpRight, Loader2, ImageUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { handleApi } from "@/api/handleApi";
 import { IRole, IUpdateUser, IUser } from "@/types/UserInterface";
@@ -55,17 +56,12 @@ import {
 import { Label } from "@/components/ui/label";
 import { useGetAllData } from "@/hooks/useGetAllData";
 import { apiName } from "@/api/apiName";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
-import { Field, FieldLabel } from "@/components/ui/field";
 import UserStatistics from "@/domains/users/UserStatistics";
 import useDebounce from "@/hooks/useDebounce";
+import { useEnterSkeletonLoading, useMinVisibleLoading } from "@/hooks/useMinimumLoading";
 import { buildQuery } from "@/utils/QueryUtils";
+
+const USER_PAGE_SIZE_OPTIONS = [5, 10, 20, 50] as const;
 
 export default function UserManagement() {
   const queryClient = useQueryClient();
@@ -76,8 +72,12 @@ export default function UserManagement() {
   const debouncedQuery = useDebounce({ value: search, delay: 500 });
   const [filterRole, setFilterRole] = useState<string>("all");
   const [filterLogin, setFilterLogin] = useState<string>("all");
-  const [pageSize, setPageSize] = useState<number>(2);
+  const [pageSize, setPageSize] = useState<number>(10);
   const [page, setPage] = useState(0);
+  const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [isAvatarDragOver, setIsAvatarDragOver] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
   const getLoginLabel = (login: string) => {
     if (login === "true") {
@@ -89,7 +89,19 @@ export default function UserManagement() {
 
   const { data: roleList } = useGetAllData({ url: apiName.roles.list });
 
-  const { data: userList, isLoading } = useQuery({
+  const buildListUrl = (targetPage: number, targetSize: number = pageSize) => {
+    const params = {
+      username: debouncedQuery ? debouncedQuery : undefined,
+      page: targetPage,
+      size: targetSize ? Number(targetSize) : undefined,
+      ...(filterLogin !== "all" && { login: getLoginLabel(filterLogin) }),
+      ...(filterRole !== "all" && { roleId: Number(filterRole) }),
+    };
+
+    return `${apiName.accounts.list}?${buildQuery(params)}`;
+  };
+
+  const { data: userList, isLoading, isFetching } = useQuery({
     queryKey: [
       `${apiName.accounts.list}`,
       debouncedQuery,
@@ -99,25 +111,36 @@ export default function UserManagement() {
       pageSize,
     ],
     queryFn: async () => {
-      const params = {
-        username: debouncedQuery ? debouncedQuery : undefined,
-        page,
-        size: pageSize ? Number(pageSize) : undefined,
-        ...(filterLogin !== "all" && { login: getLoginLabel(filterLogin) }),
-        ...(filterRole !== "all" && { roleId: Number(filterRole) }),
-      };
-
-      const url = `${apiName.accounts.list}?${buildQuery(params)}`;
+      const url = buildListUrl(page);
 
       const res = await handleApi({ url, method: "GET", withCredentials: true });
       return res.data.data;
     },
+    placeholderData: (previousData) => previousData,
   });
 
   const users = Array.isArray(userList)
     ? Array.from(userList).filter((user: IUser) => user.deleted === false)
     : [];
-  const fetchedPageSize = Array.isArray(userList) ? userList.length : 0;
+  const { data: hasNextPage = false, isFetching: isCheckingNextPage } = useQuery({
+    queryKey: [
+      `${apiName.accounts.list}`,
+      "has-next-page",
+      debouncedQuery,
+      filterRole,
+      filterLogin,
+      page,
+      pageSize,
+    ],
+    queryFn: async () => {
+      const url = buildListUrl(page + 1, pageSize);
+      const res = await handleApi({ url, method: "GET", withCredentials: true });
+      const nextPageItems = res.data.data;
+      return Array.isArray(nextPageItems) && nextPageItems.length > 0;
+    },
+    enabled: users.length > 0,
+    placeholderData: (previousData) => previousData ?? false,
+  });
 
   const { data: detailUser, isLoading: detailLoading } = useQuery({
     queryKey: [`${apiName.accounts.detail}/${detailUserId}`, detailUserId],
@@ -181,19 +204,39 @@ export default function UserManagement() {
   });
 
   const updateUser = useMutation({
-    mutationFn: async (payload: IUpdateUser) => {
-      const res = await handleApi({
+    mutationFn: async ({ payload, avatarFile }: { payload: IUpdateUser; avatarFile?: File | null }) => {
+      const updateRes = await handleApi({
         url: `${apiName.accounts.update}/${payload.userId}`,
         method: "PUT",
         data: payload,
         withCredentials: true,
       });
-      return res.data.data;
+
+      if (avatarFile) {
+        const formData = new FormData();
+        formData.append("avatar", avatarFile);
+
+        const profileRes = await handleApi({
+          url: `${apiName.accounts.updateProfile}/${payload.userId}`,
+          method: "PATCH",
+          data: formData,
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+          withCredentials: true,
+        });
+
+        return profileRes.data.data;
+      }
+
+      return updateRes.data.data;
     },
-    onSuccess: (payload) => {
+    onSuccess: (_updatedUser, variables) => {
       queryClient.invalidateQueries({ queryKey: [`${apiName.accounts.list}`] });
-      queryClient.invalidateQueries({ queryKey: [`${apiName.accounts.detail}/${payload.userId}`] });
+      queryClient.invalidateQueries({ queryKey: [`${apiName.accounts.detail}/${variables.payload.userId}`] });
       setEditingUser(null);
+      setSelectedAvatarFile(null);
+      setAvatarPreview(null);
       toast.success("Cập nhật thông tin người dùng thành công.");
     },
     onError: (err: Error) => {
@@ -210,28 +253,46 @@ export default function UserManagement() {
   }, [debouncedQuery, filterRole, filterLogin, pageSize]);
 
   useEffect(() => {
-    if (!isLoading && page > 0 && users.length === 0) {
+    if (!isLoading && !isFetching && page > 0 && users.length === 0) {
       setPage((prev) => Math.max(prev - 1, 0));
     }
-  }, [isLoading, page, users.length]);
+  }, [isLoading, isFetching, page, users.length]);
+
+  useEffect(() => {
+    return () => {
+      if (avatarPreview?.startsWith("blob:")) {
+        URL.revokeObjectURL(avatarPreview);
+      }
+    };
+  }, [avatarPreview]);
 
   const canGoPrevious = page > 0;
-  const canGoNext = fetchedPageSize === pageSize;
+  const canGoNext = hasNextPage;
+  const showEnterSkeleton = useEnterSkeletonLoading(isLoading, 2200);
+  const showSearchSpinner = useMinVisibleLoading(isFetching && !showEnterSkeleton, 900);
+  const isPageTransitionLoading = useMinVisibleLoading(isFetching && !isLoading && !showEnterSkeleton, 900);
+  const isFirstPageLoading = showEnterSkeleton && users.length === 0;
 
-  const handlePreviousPage = (event: React.MouseEvent<HTMLAnchorElement>) => {
-    event.preventDefault();
-    if (!canGoPrevious) {
+  const handlePreviousPage = () => {
+    if (isFetching || !canGoPrevious) {
       return;
     }
     setPage((prev) => Math.max(prev - 1, 0));
   };
 
-  const handleNextPage = (event: React.MouseEvent<HTMLAnchorElement>) => {
-    event.preventDefault();
-    if (isLoading || !canGoNext) {
+  const handleNextPage = () => {
+    if (isLoading || isFetching || isCheckingNextPage || !canGoNext) {
       return;
     }
     setPage((prev) => prev + 1);
+  };
+
+  const handleFirstPage = () => {
+    if (isFetching || page === 0) {
+      return;
+    }
+
+    setPage(0);
   };
 
   const openUpdateDialog = (user: IUser) => {
@@ -242,6 +303,28 @@ export default function UserManagement() {
       password: "",
       roleId: user.roles?.[0]?.id,
     });
+    setSelectedAvatarFile(null);
+    setAvatarPreview(user.avatarUrl || null);
+  };
+
+  const handleAvatarFile = (file: File | null) => {
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Vui lòng chọn file ảnh hợp lệ.");
+      return;
+    }
+
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast.error("Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 5MB.");
+      return;
+    }
+
+    setSelectedAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
   };
 
   const roleBadgeVariant = (role: string) => {
@@ -304,8 +387,11 @@ export default function UserManagement() {
                 placeholder="Tìm kiếm theo tên"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
+                className="pl-10 pr-9"
               />
+              {showSearchSpinner ? (
+                <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+              ) : null}
             </div>
 
             <Select
@@ -346,7 +432,15 @@ export default function UserManagement() {
             </Select>
           </div>
 
-          <div className="hidden overflow-x-auto rounded-lg border md:block">
+          <div className="relative hidden overflow-x-auto rounded-lg border md:block">
+            {isPageTransitionLoading ? (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-[1px]">
+                <div className="flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm text-muted-foreground shadow-sm">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Đang tải trang...
+                </div>
+              </div>
+            ) : null}
             <Table>
               <TableHeader>
                 <TableRow>
@@ -359,7 +453,26 @@ export default function UserManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ? (
+                {isFirstPageLoading ? (
+                  Array.from({ length: Math.min(pageSize, 6) }).map((_, index) => (
+                    <TableRow key={`skeleton-${index}`}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Skeleton className="h-10 w-10 rounded-full" />
+                          <div className="space-y-2">
+                            <Skeleton className="h-4 w-32" />
+                            <Skeleton className="h-3 w-20" />
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-10" /></TableCell>
+                      <TableCell className="text-right"><Skeleton className="ml-auto h-8 w-24" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : users.length === 0 ? (
                   <TableRow>
                     <TableCell
                       colSpan={6}
@@ -384,7 +497,7 @@ export default function UserManagement() {
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar className="h-10 w-10 border">
-                              <AvatarImage alt={user.username || "User"} />
+                              <AvatarImage src={user.avatarUrl || ""} alt={user.username || "User"} />
                               <AvatarFallback>
                                 {getInitials(user.username)}
                               </AvatarFallback>
@@ -565,6 +678,76 @@ export default function UserManagement() {
                                 </div>
 
                                 <div className="space-y-2">
+                                  <Label>Ảnh đại diện</Label>
+
+                                  <input
+                                    ref={avatarInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={(event) => {
+                                      const file = event.target.files?.[0] ?? null;
+                                      handleAvatarFile(file);
+                                      event.currentTarget.value = "";
+                                    }}
+                                  />
+
+                                  <div
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={() => avatarInputRef.current?.click()}
+                                    onKeyDown={(event) => {
+                                      if (event.key === "Enter" || event.key === " ") {
+                                        event.preventDefault();
+                                        avatarInputRef.current?.click();
+                                      }
+                                    }}
+                                    onDragOver={(event) => {
+                                      event.preventDefault();
+                                      setIsAvatarDragOver(true);
+                                    }}
+                                    onDragLeave={(event) => {
+                                      event.preventDefault();
+                                      setIsAvatarDragOver(false);
+                                    }}
+                                    onDrop={(event) => {
+                                      event.preventDefault();
+                                      setIsAvatarDragOver(false);
+                                      const file = event.dataTransfer.files?.[0] ?? null;
+                                      handleAvatarFile(file);
+                                    }}
+                                    className={cn(
+                                      "cursor-pointer rounded-lg border border-dashed p-4 transition",
+                                      isAvatarDragOver
+                                        ? "border-primary bg-primary/5"
+                                        : "border-muted-foreground/30 hover:border-primary/50",
+                                    )}
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <Avatar className="h-14 w-14 border">
+                                        <AvatarImage src={avatarPreview || ""} alt="Avatar preview" />
+                                        <AvatarFallback>IMG</AvatarFallback>
+                                      </Avatar>
+
+                                      <div className="space-y-1">
+                                        <p className="flex items-center gap-2 text-sm font-medium">
+                                          <ImageUp className="h-4 w-4" />
+                                          Kéo & thả ảnh vào đây
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                          Hoặc bấm để chọn ảnh từ máy (JPG, PNG, WEBP - tối đa 5MB)
+                                        </p>
+                                        {selectedAvatarFile ? (
+                                          <p className="text-xs text-emerald-600">
+                                            Đã chọn: {selectedAvatarFile.name}
+                                          </p>
+                                        ) : null}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="space-y-2">
                                   <Label htmlFor="edit-role">Vai trò</Label>
                                   <Select
                                     value={String(editingUser.roleId ?? "")}
@@ -595,7 +778,14 @@ export default function UserManagement() {
                             )}
 
                             <DialogFooter>
-                              <Button variant="outline" onClick={() => setEditingUser(null)}>
+                              <Button
+                                variant="outline"
+                                onClick={() => {
+                                  setEditingUser(null);
+                                  setSelectedAvatarFile(null);
+                                  setAvatarPreview(null);
+                                }}
+                              >
                                 Hủy
                               </Button>
                               <Button
@@ -614,7 +804,10 @@ export default function UserManagement() {
                                       : {}),
                                   };
 
-                                  updateUser.mutate(payload);
+                                  updateUser.mutate({
+                                    payload,
+                                    avatarFile: selectedAvatarFile,
+                                  });
                                 }}
                                 disabled={updateUser.isPending}
                               >
@@ -633,9 +826,15 @@ export default function UserManagement() {
           </div>
 
           <div className="space-y-3 md:hidden">
-            {isLoading ? (
-              <div className="rounded-lg border p-5 text-center text-sm text-muted-foreground">
-                Đang tải dữ liệu người dùng...
+            {isFirstPageLoading ? (
+              <div className="space-y-3 rounded-lg border p-4">
+                {Array.from({ length: Math.min(pageSize, 4) }).map((_, index) => (
+                  <div key={`mobile-skeleton-${index}`} className="space-y-2 rounded-md border p-3">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                ))}
               </div>
             ) : users.length === 0 ? (
               <div className="rounded-lg border p-5 text-center text-sm text-muted-foreground">
@@ -647,7 +846,7 @@ export default function UserManagement() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10 border">
-                        <AvatarImage alt={user.username || "User"} />
+                        <AvatarImage src={user.avatarUrl || ""} alt={user.username || "User"} />
                         <AvatarFallback>
                           {getInitials(user.username)}
                         </AvatarFallback>
@@ -758,11 +957,12 @@ export default function UserManagement() {
           </div>
 
           {/* PAGINATION */}
-          <div className="flex items-center justify-between gap-4">
-            <Field orientation="horizontal" className="w-fit">
-              <FieldLabel htmlFor="select-rows-per-page">
-                Rows per page
-              </FieldLabel>
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-slate-50/70 px-3 py-2 text-sm">
+            <span className="text-muted-foreground">
+              Trang {page + 1} - {users.length} user trong trang này
+            </span>
+
+            <div className="flex flex-wrap items-center gap-2">
               <Select
                 value={String(pageSize)}
                 onValueChange={(value) => {
@@ -770,45 +970,36 @@ export default function UserManagement() {
                   setPage(0);
                 }}
               >
-                <SelectTrigger className="w-20" id="select-rows-per-page">
-                  <SelectValue />
+                <SelectTrigger className="h-8 w-[110px]" id="select-rows-per-page">
+                  <SelectValue placeholder="Page size" />
                 </SelectTrigger>
                 <SelectContent align="start">
                   <SelectGroup>
-                    <SelectItem value="2">2</SelectItem>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="25">25</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                    <SelectItem value="100">100</SelectItem>
+                    {USER_PAGE_SIZE_OPTIONS.map((size) => (
+                      <SelectItem value={String(size)} key={size}>
+                        {size}/trang
+                      </SelectItem>
+                    ))}
                   </SelectGroup>
                 </SelectContent>
               </Select>
-            </Field>
-            <Pagination className="mx-0 w-auto">
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    href="#"
-                    onClick={handlePreviousPage}
-                    aria-disabled={!canGoPrevious}
-                    className={!canGoPrevious ? "pointer-events-none opacity-50" : ""}
-                  />
-                </PaginationItem>
-                <PaginationItem>
-                  <span className="px-3 text-sm text-muted-foreground">
-                    Trang {page + 1}
-                  </span>
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationNext
-                    href="#"
-                    onClick={handleNextPage}
-                    aria-disabled={isLoading || !canGoNext}
-                    className={isLoading || !canGoNext ? "pointer-events-none opacity-50" : ""}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+
+              <Button variant="outline" size="sm" onClick={handleFirstPage} disabled={isFetching || page === 0}>
+                First
+              </Button>
+              <Button variant="outline" size="sm" onClick={handlePreviousPage} disabled={isFetching || !canGoPrevious}>
+                Prev
+              </Button>
+              <span className="min-w-16 text-center text-xs text-muted-foreground">Trang {page + 1}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleNextPage}
+                disabled={isLoading || isFetching || isCheckingNextPage || !canGoNext}
+              >
+                Next
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -38,6 +38,8 @@ public class Account extends AbstractEntity implements Serializable {
     @Column(unique = true)
     String email;
 
+    String avatarUrl;
+
     String password;
 
     @Builder.Default

@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { apiName } from "@/api/apiName";
 import { useGetAllData } from "@/hooks/useGetAllData";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AxiosError } from "axios";
 
 const getRoleLabel = (role: string) => {
   switch (role) {
@@ -40,9 +41,22 @@ const getInitials = (name: string | null | undefined) => {
 export default function SoftDeletedUsers() {
   const queryClient = useQueryClient();
 
-  const { data: users, isLoading } = useGetAllData({ url: `${apiName.accounts.listSoftDelete}` })
+  const getApiErrorMessage = (error: unknown, fallback: string) => {
+    if (error instanceof AxiosError) {
+      const message =
+        (error.response?.data as { message?: string } | undefined)?.message ??
+        error.message;
+      return message || fallback;
+    }
 
-  console.log(users)
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    return fallback;
+  };
+
+  const { data: users, isLoading } = useGetAllData({ url: `${apiName.accounts.listSoftDelete}` })
 
   const restoreUser = useMutation({
     mutationFn: async (userId: string | number) => {
@@ -59,7 +73,7 @@ export default function SoftDeletedUsers() {
       // queryClient.invalidateQueries({ queryKey: ["userActiveNum"] });
       toast.success("Đã restore người dùng.");
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (error) => toast.error(getApiErrorMessage(error, "Restore người dùng thất bại.")),
   });
 
   const deleteUserPermanent = useMutation({
@@ -75,9 +89,9 @@ export default function SoftDeletedUsers() {
       queryClient.invalidateQueries({ queryKey: [`${apiName.accounts.listSoftDelete}`] });
       queryClient.invalidateQueries({ queryKey: [`${apiName.accounts.list}`] });
       // queryClient.invalidateQueries({ queryKey: ["userActiveNum"] });
-      toast.success("Đã restore người dùng.");
+      toast.success("Đã xóa vĩnh viễn người dùng.");
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (error) => toast.error(getApiErrorMessage(error, "Xóa vĩnh viễn người dùng thất bại.")),
   });
 
 
@@ -176,29 +190,26 @@ export default function SoftDeletedUsers() {
                             <Button
                               className="bg-red-400"
                               size="icon"
+                              disabled={deleteUserPermanent.isPending}
                             >
                               <Trash />
                             </Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                              <AlertDialogTitle>Bạn chắc chắn muốn xóa vĩnh viễn?</AlertDialogTitle>
                               <AlertDialogDescription>
-                                This action cannot be undone. This will permanently delete your account
-                                from our servers.
+                                Hành động này không thể hoàn tác. Người dùng sẽ bị xóa khỏi hệ thống vĩnh viễn.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction>
-                                <Button
-                                  onClick={() => deleteUserPermanent.mutate(user.id || "")}
-                                  disabled={deleteUserPermanent.isPending}
-                                  className="bg-red-400"
-                                  size="icon"
-                                >
-                                  Delete Permanent
-                                </Button>
+                              <AlertDialogAction
+                                onClick={() => deleteUserPermanent.mutate(user.id || "")}
+                                disabled={deleteUserPermanent.isPending}
+                                className="bg-red-500 text-white hover:bg-red-600"
+                              >
+                                {deleteUserPermanent.isPending ? "Đang xóa..." : "Xóa vĩnh viễn"}
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>

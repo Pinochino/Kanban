@@ -6,6 +6,7 @@ import com.example.trello.dto.response.AccountResponse;
 import com.example.trello.model.Account;
 import com.example.trello.specifications.filter.AccountFilter;
 import jakarta.transaction.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -40,4 +41,6 @@ public interface AccountService {
     List<AccountResponse> sortDeleteAccounts();
 
     AccountResponse updateAccount(Long accountId, UpdateAccountRequest request);
+
+    AccountResponse updateAccountProfile(Long accountId, UpdateAccountRequest request, MultipartFile avatarFile);
 }

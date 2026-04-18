@@ -1,9 +1,11 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import TaskList from "@/domains/projects/TaskList";
 import { useGetAllData } from "@/hooks/useGetAllData";
 import { apiName } from "@/api/apiName";
 import { Sparkles } from "lucide-react";
 import { useMemo } from "react";
+import { useEnterSkeletonLoading } from "@/hooks/useMinimumLoading";
 import { useParams, useSearchParams } from "react-router-dom";
 
 const TaskManagement = () => {
@@ -19,6 +21,7 @@ const TaskManagement = () => {
     isLoading,
     isError,
   } = useGetAllData({ url: projectRequestUrl });
+  const showEnterSkeleton = useEnterSkeletonLoading(isLoading, 2200);
 
   const displayProjects = useMemo(() => {
     if (!projectData) {
@@ -49,9 +52,23 @@ const TaskManagement = () => {
         </CardContent>
       </Card>
 
-      {isLoading ? (
+      {showEnterSkeleton ? (
         <Card>
-          <CardContent className="p-6 text-sm text-muted-foreground">Đang tải board task...</CardContent>
+          <CardContent className="space-y-4 p-6">
+            <div className="space-y-2">
+              <Skeleton className="h-5 w-48" />
+              <Skeleton className="h-4 w-80" />
+            </div>
+            <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="space-y-3 rounded-lg border p-4">
+                  <Skeleton className="h-5 w-24" />
+                  <Skeleton className="h-20 w-full" />
+                  <Skeleton className="h-20 w-full" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
         </Card>
       ) : isError ? (
         <Card>
