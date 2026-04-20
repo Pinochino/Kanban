@@ -14,6 +14,8 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 public class AccountFilter extends DataToolRequest {
 
+    Long accountId;
+
     String username;
 
     Boolean active;

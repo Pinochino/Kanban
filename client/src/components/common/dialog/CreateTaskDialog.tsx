@@ -22,6 +22,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n/I18nProvider";
 
 type TaskDateErrors = {
   dueDate?: string;
@@ -61,48 +62,47 @@ const CreateTaskDialog = ({
   isSubmitting = false,
 }: CreateTaskDialogProps) => {
   const { data: userList } = useGetAllData({ url: apiName.accounts.list });
+  const { t } = useI18n();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl">
         <form className="space-y-4" onSubmit={onSubmit}>
           <DialogHeader>
-            <DialogTitle>Create task</DialogTitle>
-            <DialogDescription>
-              Tạo task trực tiếp vào cột trạng thái đang chọn.
-            </DialogDescription>
+            <DialogTitle>{t("taskBoard.createTask")}</DialogTitle>
+            <DialogDescription>{t("taskBoard.createTaskDialogDescription")}</DialogDescription>
           </DialogHeader>
 
           <div className="flex flex-wrap gap-2">
-            {project ? <Badge variant="secondary">Project: {project.title}</Badge> : null}
-            {columnLabel ? <Badge variant="outline">Column: {columnLabel}</Badge> : null}
+            {project ? <Badge variant="secondary">{t("taskBoard.projectBadge")}: {project.title}</Badge> : null}
+            {columnLabel ? <Badge variant="outline">{t("taskBoard.columnBadge")}: {columnLabel}</Badge> : null}
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="task-title">Title</Label>
+              <Label htmlFor="task-title">{t("taskBoard.title")}</Label>
               <Input
                 id="task-title"
                 value={form.title}
                 onChange={(event) => onFieldChange("title", event.target.value)}
-                placeholder="Example: Build drag-and-drop for card sorting"
+                placeholder={t("taskBoard.exampleTitle")}
                 required
               />
             </div>
 
             <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="task-description">Description</Label>
+              <Label htmlFor="task-description">{t("taskBoard.description")}</Label>
               <Textarea
                 id="task-description"
                 value={form.description}
                 onChange={(event) => onFieldChange("description", event.target.value)}
-                placeholder="Describe acceptance criteria, context, and blockers..."
+                placeholder={t("taskBoard.exampleDescription")}
                 className="min-h-[120px]"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="task-assignee">Assignee</Label>
+              <Label htmlFor="task-assignee">{t("taskBoard.tableAssignee")}</Label>
               <select
                 id="task-assignee"
                 value={form.assignedAccountId}
@@ -110,7 +110,7 @@ const CreateTaskDialog = ({
                 className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 required
               >
-                <option value="">Choose user</option>
+                <option value="">{t("taskBoard.chooseUser")}</option>
                 {(Array.isArray(userList) ? Array.from(userList) : []).map((user: IUser) => (
                   <option key={user.id} value={user.id}>
                     {user.username}
@@ -120,7 +120,7 @@ const CreateTaskDialog = ({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="task-due-date">Due date</Label>
+              <Label htmlFor="task-due-date">{t("taskBoard.dueDate")}</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -134,7 +134,7 @@ const CreateTaskDialog = ({
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {form.dueDate ? format(parseDateValue(form.dueDate) ?? new Date(), "dd/MM/yyyy") : "Chọn due date"}
+                    {form.dueDate ? format(parseDateValue(form.dueDate) ?? new Date(), "dd/MM/yyyy") : t("taskBoard.selectDueDate")}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -146,7 +146,7 @@ const CreateTaskDialog = ({
                   />
                   {form.dueDate ? (
                     <div className="border-t p-2">
-                      <Button type="button" variant="ghost" size="sm" className="w-full" onClick={() => onFieldChange("dueDate", "")}>Xóa due date</Button>
+                      <Button type="button" variant="ghost" size="sm" className="w-full" onClick={() => onFieldChange("dueDate", "")}>{t("taskBoard.clearDueDate")}</Button>
                     </div>
                   ) : null}
                 </PopoverContent>
@@ -157,7 +157,7 @@ const CreateTaskDialog = ({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="task-reminder-date">Reminder date</Label>
+              <Label htmlFor="task-reminder-date">{t("taskBoard.reminderDate")}</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -171,7 +171,7 @@ const CreateTaskDialog = ({
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {form.reminderDate ? format(parseDateValue(form.reminderDate) ?? new Date(), "dd/MM/yyyy") : "Chọn reminder date"}
+                    {form.reminderDate ? format(parseDateValue(form.reminderDate) ?? new Date(), "dd/MM/yyyy") : t("taskBoard.selectReminderDate")}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -183,7 +183,7 @@ const CreateTaskDialog = ({
                   />
                   {form.reminderDate ? (
                     <div className="border-t p-2">
-                      <Button type="button" variant="ghost" size="sm" className="w-full" onClick={() => onFieldChange("reminderDate", "")}>Xóa reminder date</Button>
+                      <Button type="button" variant="ghost" size="sm" className="w-full" onClick={() => onFieldChange("reminderDate", "")}>{t("taskBoard.clearReminderDate")}</Button>
                     </div>
                   ) : null}
                 </PopoverContent>
@@ -196,16 +196,16 @@ const CreateTaskDialog = ({
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
-              Cancel
+              {t("taskBoard.cancel")}
             </Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? (
                 <span className="inline-flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Creating...
+                  {t("taskBoard.creating")}
                 </span>
               ) : (
-                "Create task"
+                t("taskBoard.createTask")
               )}
             </Button>
           </DialogFooter>

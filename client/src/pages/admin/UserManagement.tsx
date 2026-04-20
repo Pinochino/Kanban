@@ -54,17 +54,20 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Empty } from "@/components/ui/empty";
 import { useGetAllData } from "@/hooks/useGetAllData";
 import { apiName } from "@/api/apiName";
 import UserStatistics from "@/domains/users/UserStatistics";
 import useDebounce from "@/hooks/useDebounce";
 import { useEnterSkeletonLoading, useMinVisibleLoading } from "@/hooks/useMinimumLoading";
 import { buildQuery } from "@/utils/QueryUtils";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 const USER_PAGE_SIZE_OPTIONS = [5, 10, 15, 20] as const;
 
 export default function UserManagement() {
   const queryClient = useQueryClient();
+  const { user: currentUser } = useCurrentUser();
 
   const [search, setSearch] = useState("");
   const [detailUserId, setDetailUserId] = useState<string | null>(null);
@@ -90,8 +93,13 @@ export default function UserManagement() {
   const { data: roleList } = useGetAllData({ url: apiName.roles.list });
 
   const buildListUrl = (targetPage: number, targetSize: number = pageSize) => {
+    const normalizedQuery = String(debouncedQuery ?? "");
+    const trimmedQuery = normalizedQuery.trim();
+    const isNumericQuery = /^\d+$/.test(trimmedQuery);
+
     const params = {
-      username: debouncedQuery ? debouncedQuery : undefined,
+      username: trimmedQuery && !isNumericQuery ? trimmedQuery : undefined,
+      accountId: trimmedQuery && isNumericQuery ? Number(trimmedQuery) : undefined,
       page: targetPage,
       size: targetSize ? Number(targetSize) : undefined,
       ...(filterLogin !== "all" && { login: getLoginLabel(filterLogin) }),
@@ -245,6 +253,12 @@ export default function UserManagement() {
   });
 
   const handleLockUser = async (userId: number | string, lock: boolean) => {
+    const targetUser = users.find((item: IUser) => String(item.id ?? "") === String(userId));
+    if (targetUser && !canToggleUserActive(targetUser)) {
+      toast.error("Bạn không có quyền đổi trạng thái active của tài khoản này.");
+      return;
+    }
+
     await toggleLock.mutateAsync({ userId, lock });
   };
 
@@ -327,6 +341,31 @@ export default function UserManagement() {
     setAvatarPreview(URL.createObjectURL(file));
   };
 
+  const hasRole = (roles: IRole[] | undefined, roleName: string) => {
+    if (!Array.isArray(roles)) {
+      return false;
+    }
+
+    return roles.some((role) => String(role.name) === roleName);
+  };
+
+  const isCurrentUserAdmin = hasRole(currentUser?.roles, "ADMIN");
+  const isCurrentUserSuperAdmin = hasRole(currentUser?.roles, "SUPER_ADMIN");
+
+  const canToggleUserActive = (targetUser: IUser) => {
+    const isSelf = String(currentUser?.id ?? "") === String(targetUser.id ?? "");
+    if (isSelf) {
+      return false;
+    }
+
+    const targetIsAdmin = hasRole(targetUser.roles, "ADMIN") || hasRole(targetUser.roles, "SUPER_ADMIN");
+    if (!isCurrentUserSuperAdmin && isCurrentUserAdmin && targetIsAdmin) {
+      return false;
+    }
+
+    return true;
+  };
+
   const roleBadgeVariant = (role: string) => {
     switch (role) {
       case "SUPER_ADMIN":
@@ -384,7 +423,7 @@ export default function UserManagement() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Tìm kiếm theo tên"
+                placeholder="Tìm kiếm theo tên hoặc ID"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-10 pr-9"
@@ -441,15 +480,15 @@ export default function UserManagement() {
                 </div>
               </div>
             ) : null}
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Username</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Created At</TableHead>
-                  <TableHead>Active</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="w-[320px]">Username</TableHead>
+                  <TableHead className="w-[220px]">Role</TableHead>
+                  <TableHead className="w-[140px] text-center">Status</TableHead>
+                  <TableHead className="w-[140px]">Created At</TableHead>
+                  <TableHead className="w-[100px] text-center">Active</TableHead>
+                  <TableHead className="w-[150px] text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -474,27 +513,19 @@ export default function UserManagement() {
                   ))
                 ) : users.length === 0 ? (
                   <TableRow>
-                    <TableCell
-                      colSpan={6}
-                      className="py-8 text-center text-muted-foreground"
-                    >
-                      Đang tải dữ liệu người dùng...
-                    </TableCell>
-                  </TableRow>
-                ) : users.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={6}
-                      className="py-8 text-center text-muted-foreground"
-                    >
-                      Không có người dùng phù hợp với bộ lọc hiện tại.
+                    <TableCell colSpan={6} className="py-4">
+                      <Empty
+                        title="Không có người dùng"
+                        description="Thử đổi bộ lọc hoặc từ khóa tìm kiếm theo tên/ID."
+                        icon={<Search className="h-5 w-5" />}
+                      />
                     </TableCell>
                   </TableRow>
                 ) : (
                   users.map((user: IUser) => {
                     return (
-                      <TableRow key={user.id}>
-                        <TableCell>
+                      <TableRow key={user.id} className="align-middle">
+                        <TableCell className="py-3">
                           <div className="flex items-center gap-3">
                             <Avatar className="h-10 w-10 border">
                               <AvatarImage src={user.avatarUrl || ""} alt={user.username || "User"} />
@@ -513,25 +544,32 @@ export default function UserManagement() {
                           </div>
                         </TableCell>
 
-                        <TableCell>
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            {user.roles.map((r: IRole) => (
-                              <Badge
-                                key={r.id}
-                                variant={
-                                  roleBadgeVariant(r.name) as
-                                  | "default"
-                                  | "secondary"
-                                  | "outline"
-                                }
-                              >
-                                {getRoleLabel(r.name as string)}
+                        <TableCell className="w-[220px] py-3">
+                          <div className="flex min-h-8 flex-wrap items-center gap-1.5">
+                            {user.roles?.length ? (
+                              user.roles.map((r: IRole) => (
+                                <Badge
+                                  key={r.id}
+                                  variant={
+                                    roleBadgeVariant(r.name) as
+                                    | "default"
+                                    | "secondary"
+                                    | "outline"
+                                  }
+                                  className="whitespace-nowrap"
+                                >
+                                  {getRoleLabel(r.name as string)}
+                                </Badge>
+                              ))
+                            ) : (
+                              <Badge variant="outline" className="whitespace-nowrap">
+                                Chưa có vai trò
                               </Badge>
-                            ))}
+                            )}
                           </div>
                         </TableCell>
 
-                        <TableCell>
+                        <TableCell className="py-3 text-center">
                           <Badge
                             variant={!user.login ? "destructive" : "outline"}
                             className={cn(
@@ -543,25 +581,33 @@ export default function UserManagement() {
                           </Badge>
                         </TableCell>
 
-                        <TableCell className="text-sm text-muted-foreground">
+                        <TableCell className="py-3 text-sm text-muted-foreground">
                           {new Date(user.createdAt).toLocaleDateString("vi-VN")}
                         </TableCell>
 
-                        <TableCell>
+                        <TableCell className="py-3 text-center">
+                          {!canToggleUserActive(user) ? (
+                            <span className="block text-xs text-muted-foreground">
+                              {String(currentUser?.id ?? "") === String(user.id ?? "")
+                                ? "Tài khoản hiện tại"
+                                : "Không đủ quyền"}
+                            </span>
+                          ) : null}
                           <Switch
-                            defaultChecked={user.active}
+                            checked={Boolean(user.active)}
+                            disabled={!canToggleUserActive(user)}
                             onCheckedChange={(checked) =>
                               handleLockUser(user.id, checked)
                             }
                           />
                         </TableCell>
 
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
+                        <TableCell className="py-3 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
                             <Button
                               variant="default"
-                              className="bg-blue-500 hover:bg-blue-600"
-                              size="sm"
+                              className="h-8 w-8 bg-blue-500 p-0 hover:bg-blue-600"
+                              size="icon"
                               onClick={() => setDetailUserId(String(user.id))}
                             >
                               <CircleArrowOutUpRight size={12} />
@@ -569,8 +615,8 @@ export default function UserManagement() {
 
                             <Button
                               variant="default"
-                              className="bg-orange-500 hover:bg-orange-600"
-                              size="sm"
+                              className="h-8 w-8 bg-orange-500 p-0 hover:bg-orange-600"
+                              size="icon"
                               onClick={() => openUpdateDialog(user)}
                             >
                               <Pencil size={12} />
@@ -581,7 +627,7 @@ export default function UserManagement() {
                                 <Button
                                   variant="default"
                                   size="icon"
-                                  className="bg-red-500 hover:bg-red-600"
+                                  className="h-8 w-8 bg-red-500 hover:bg-red-600"
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -837,12 +883,14 @@ export default function UserManagement() {
                 ))}
               </div>
             ) : users.length === 0 ? (
-              <div className="rounded-lg border p-5 text-center text-sm text-muted-foreground">
-                Không có người dùng phù hợp với bộ lọc hiện tại.
-              </div>
+              <Empty
+                title="Không có người dùng"
+                description="Thử đổi bộ lọc hoặc từ khóa tìm kiếm theo tên/ID."
+                icon={<Search className="h-5 w-5" />}
+              />
             ) : (
               users.map((user: IUser) => (
-                <div key={user.id} className="space-y-3 rounded-lg border p-4">
+                <div key={user.id} className="space-y-3 rounded-lg border p-4 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10 border">
@@ -861,7 +909,8 @@ export default function UserManagement() {
                       </div>
                     </div>
                     <Switch
-                      defaultChecked={user.active}
+                      checked={Boolean(user.active)}
+                      disabled={!canToggleUserActive(user)}
                       onCheckedChange={(checked) =>
                         handleLockUser(user.id, checked)
                       }
@@ -901,7 +950,7 @@ export default function UserManagement() {
                   <div className="grid grid-cols-3 gap-2">
                     <Button
                       variant="default"
-                      className="bg-blue-500 hover:bg-blue-600"
+                      className="h-9 bg-blue-500 hover:bg-blue-600"
                       size="sm"
                       onClick={() => setDetailUserId(String(user.id))}
                     >
@@ -910,7 +959,7 @@ export default function UserManagement() {
 
                     <Button
                       variant="default"
-                      className="bg-orange-500 hover:bg-orange-600"
+                      className="h-9 bg-orange-500 hover:bg-orange-600"
                       size="sm"
                       onClick={() => openUpdateDialog(user)}
                     >
@@ -922,7 +971,7 @@ export default function UserManagement() {
                         <Button
                           variant="default"
                           size="sm"
-                          className="bg-red-500 hover:bg-red-600"
+                          className="h-9 bg-red-500 hover:bg-red-600"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

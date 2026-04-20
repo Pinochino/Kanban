@@ -6,5 +6,7 @@ public interface CloudinaryService {
 
 	String uploadAvatar(MultipartFile file, Long accountId);
 
+	String uploadTaskAttachment(MultipartFile file, Long taskId);
+
 	void deleteByUrl(String fileUrl);
 }

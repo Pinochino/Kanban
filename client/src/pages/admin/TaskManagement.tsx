@@ -7,10 +7,12 @@ import { Sparkles } from "lucide-react";
 import { useMemo } from "react";
 import { useEnterSkeletonLoading } from "@/hooks/useMinimumLoading";
 import { useParams, useSearchParams } from "react-router-dom";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const TaskManagement = () => {
   const { projectId: routeProjectId } = useParams();
   const [searchParams] = useSearchParams();
+  const { t } = useI18n();
   const selectedProjectId = routeProjectId ?? searchParams.get("projectId");
   const projectRequestUrl = selectedProjectId
     ? `${apiName.projects.detail}/${selectedProjectId}`
@@ -41,13 +43,13 @@ const TaskManagement = () => {
         <CardContent className="flex flex-col gap-3 p-6">
           <p className="inline-flex items-center gap-2 text-sm text-slate-200">
             <Sparkles className="h-4 w-4" />
-            Task workspace
+            {t("taskBoard.workspace")}
           </p>
-          <h1 className="text-2xl font-semibold md:text-3xl">Task Management</h1>
+          <h1 className="text-2xl font-semibold md:text-3xl">{t("taskBoard.projectTasksTitle")}</h1>
           <p className="max-w-2xl text-sm text-slate-200">
             {selectedProjectId
-              ? `Board task riêng của project ${selectedProjectId}.`
-              : "Trang task tách riêng khỏi project để theo dõi và xử lý công việc tập trung."}
+              ? `${t("taskBoard.projectTasksTitle")}: ${selectedProjectId}`
+              : t("taskBoard.projectTasksDescription")}
           </p>
         </CardContent>
       </Card>
@@ -73,7 +75,7 @@ const TaskManagement = () => {
       ) : isError ? (
         <Card>
           <CardContent className="p-6 text-sm text-red-600">
-            Không thể tải dữ liệu project/task. Vui lòng tải lại trang.
+            {t("taskBoard.loadFailed")}
           </CardContent>
         </Card>
       ) : (

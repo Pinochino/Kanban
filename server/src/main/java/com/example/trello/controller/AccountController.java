@@ -34,12 +34,14 @@ public class AccountController {
             @RequestParam(value = "size", defaultValue = "5", required = false) int size,
             @RequestParam(value = "sort", defaultValue = "id", required = false) String sortBy,
             @RequestParam(value = "ascending", defaultValue = "false", required = false) Boolean ascending,
+            @RequestParam(value = "accountId", required = false) Long accountId,
             @RequestParam(value = "username", required = false) String username,
             @RequestParam(value = "roleId", required = false) Long roleId,
             @RequestParam(value = "active", required = false) Boolean isActive,
             @RequestParam(value = "login", required = false) Boolean isLogin) {
 
         AccountFilter request = AccountFilter.builder()
+                .accountId(accountId)
                 .username(username)
                 .roleId(roleId)
                 .login(isLogin)

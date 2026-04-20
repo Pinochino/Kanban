@@ -1,5 +1,6 @@
 package com.example.trello.service.task;
 
+import com.example.trello.constants.ActionType;
 import com.example.trello.constants.ErrorCode;
 import com.example.trello.constants.ListTaskStatus;
 import com.example.trello.constants.RoleName;
@@ -15,6 +16,8 @@ import com.example.trello.repository.AccountRepository;
 import com.example.trello.repository.ListTaskRepository;
 import com.example.trello.repository.TaskRepository;
 import com.example.trello.service.notification.NotificationService;
+import com.example.trello.service.taskattachment.TaskAttachmentService;
+import com.example.trello.service.taskactivity.TaskActivityService;
 import com.example.trello.utils.JwtUtil;
 import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
@@ -47,6 +50,8 @@ public class TaskServiceImpl implements TaskService {
     JwtUtil jwtUtil;
     TaskMapper taskMapper;
         NotificationService notificationService;
+        TaskAttachmentService taskAttachmentService;
+        TaskActivityService taskActivityService;
 
     @Transactional
     @Override
@@ -76,7 +81,9 @@ public class TaskServiceImpl implements TaskService {
         newTask.setOrderIndex((long) taskRepository.countByListTask(listTask));
 
         newTask = taskRepository.save(newTask);
-        notificationService.notifyTaskAssigned(newTask, account, jwtUtil.getCurrentUserLogin());
+        Account actor = jwtUtil.getCurrentUserLogin();
+        notificationService.notifyTaskAssigned(newTask, account, actor);
+        taskActivityService.log(newTask, actor, ActionType.CREATE, "Created task '" + newTask.getTitle() + "'.");
 
         return taskMapper.toTaskResponse(newTask);
     }
@@ -167,6 +174,8 @@ public class TaskServiceImpl implements TaskService {
 
         account.getTasks().remove(task);
         listTask.getTaskList().remove(task);
+        taskAttachmentService.deleteByTaskId(taskId);
+        taskActivityService.deleteByTaskId(taskId);
         taskRepository.delete(task);
     }
 
@@ -186,6 +195,8 @@ public class TaskServiceImpl implements TaskService {
 
         account.getTasks().clear();
         listTask.getTaskList().clear();
+        taskAttachmentService.deleteAll();
+        taskActivityService.deleteAll();
         taskRepository.deleteAll();
     }
 
@@ -217,9 +228,11 @@ public class TaskServiceImpl implements TaskService {
 
         task = taskRepository.save(task);
 
-                if (!Objects.equals(previousAssignedAccountId, account.getId())) {
-                        notificationService.notifyTaskAssigned(task, account, jwtUtil.getCurrentUserLogin());
-                }
+        taskActivityService.log(task, jwtUtil.getCurrentUserLogin(), ActionType.EDIT, "Updated task information.");
+
+        if (!Objects.equals(previousAssignedAccountId, account.getId())) {
+            notificationService.notifyTaskAssigned(task, account, jwtUtil.getCurrentUserLogin());
+        }
 
         return taskMapper.toTaskResponse(task);
     }
@@ -244,9 +257,15 @@ public class TaskServiceImpl implements TaskService {
                 .findById(listTaskId)
                 .orElseThrow(() -> new AppError(ErrorCode.LIST_TASK_NOT_FOUND));
 
+        String fromStatus = task.getListTask() != null ? String.valueOf(task.getListTask().getStatus()) : "UNKNOWN";
+        String toStatus = String.valueOf(listTask.getStatus());
+
         task.setListTask(listTask);
         task.setOrderIndex((long) taskRepository.countByListTask(listTask));
         taskRepository.save(task);
+
+        taskActivityService.log(task, currentAccount, ActionType.STATUS_CHANGE,
+                "Moved status from " + fromStatus + " to " + toStatus + ".");
     }
 
         private boolean canManageTask(Task task, Account account) {

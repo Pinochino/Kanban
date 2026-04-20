@@ -1,5 +1,6 @@
 package com.example.trello.service.tasklabel;
 
+import com.example.trello.constants.ActionType;
 import com.example.trello.constants.ErrorCode;
 import com.example.trello.dto.response.TaskLabelResponse;
 import com.example.trello.exception.AppError;
@@ -9,6 +10,8 @@ import com.example.trello.model.TaskLabel;
 import com.example.trello.repository.LabelRepository;
 import com.example.trello.repository.TaskLabelRepository;
 import com.example.trello.repository.TaskRepository;
+import com.example.trello.service.taskactivity.TaskActivityService;
+import com.example.trello.utils.JwtUtil;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -24,6 +27,8 @@ public class TaskLabelServiceImpl implements TaskLabelService {
     TaskLabelRepository taskLabelRepository;
     TaskRepository taskRepository;
     LabelRepository labelRepository;
+        JwtUtil jwtUtil;
+        TaskActivityService taskActivityService;
 
     @Override
     public List<TaskLabelResponse> getTaskLabels(Long taskId) {
@@ -41,11 +46,18 @@ public class TaskLabelServiceImpl implements TaskLabelService {
         Label label = labelRepository.findById(labelId)
                 .orElseThrow(() -> new AppError(ErrorCode.LABEL_NOT_FOUND));
 
-        taskLabelRepository.findByTaskIdAndLabelId(taskId, labelId)
-                .ifPresentOrElse(
-                        taskLabelRepository::delete,
-                        () -> taskLabelRepository.save(new TaskLabel(null, task, label))
-                );
+        String actionMessage;
+
+        var existing = taskLabelRepository.findByTaskIdAndLabelId(taskId, labelId);
+        if (existing.isPresent()) {
+            taskLabelRepository.delete(existing.get());
+            actionMessage = "Removed label '" + label.getTitle() + "'.";
+        } else {
+            taskLabelRepository.save(new TaskLabel(null, task, label));
+            actionMessage = "Added label '" + label.getTitle() + "'.";
+        }
+
+        taskActivityService.log(task, jwtUtil.getCurrentUserLogin(), ActionType.LABEL_UPDATE, actionMessage);
 
         return taskLabelRepository.findAllByTaskId(taskId)
                 .stream()

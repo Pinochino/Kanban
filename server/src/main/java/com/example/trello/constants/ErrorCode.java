@@ -53,6 +53,14 @@ public enum ErrorCode {
     CHAT_GROUP_FORBIDDEN(134, "You don't have permission to access this chat group", HttpStatus.FORBIDDEN),
     CHAT_GROUP_MEMBER_REQUIRED(135, "Chat group requires at least one other member", HttpStatus.BAD_REQUEST),
     CHAT_GROUP_NAME_INVALID(136, "Chat group name is invalid", HttpStatus.BAD_REQUEST),
+    TASK_ATTACHMENT_FILE_REQUIRED(137, "Attachment file is required", HttpStatus.BAD_REQUEST),
+    TASK_ATTACHMENT_UPLOAD_FAILED(138, "Task attachment upload failed", HttpStatus.INTERNAL_SERVER_ERROR),
+    TASK_ATTACHMENT_NOT_FOUND(139, "Task attachment not found", HttpStatus.NOT_FOUND),
+    TASK_ATTACHMENT_FILE_TOO_LARGE(140, "Task attachment exceeds max size", HttpStatus.BAD_REQUEST),
+    TASK_ATTACHMENT_INVALID_FILE_TYPE(141, "Task attachment file type is not allowed", HttpStatus.BAD_REQUEST),
+    ACCOUNT_SELF_DEACTIVATION_NOT_ALLOWED(142, "You cannot deactivate your own account", HttpStatus.FORBIDDEN),
+    ACCOUNT_ADMIN_MANAGE_ADMIN_NOT_ALLOWED(143, "Admin cannot change active status of other admin accounts", HttpStatus.FORBIDDEN),
+    ACCOUNT_PROFILE_UPDATE_NOT_ALLOWED(144, "You can only update your own profile", HttpStatus.FORBIDDEN),
 
 
     //    LIST_TASK

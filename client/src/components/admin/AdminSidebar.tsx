@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Kanban, Bell, LogOut, MessagesSquare } from "lucide-react";
+import { LayoutDashboard, Users, Bell, LogOut, MessagesSquare, Kanban } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
@@ -33,7 +33,7 @@ export function AdminSidebar() {
     { title: t("sidebar.dashboard"), url: "/", icon: LayoutDashboard },
     { title: t("sidebar.accounts"), url: "/users", icon: Users },
     { title: t("sidebar.projects"), url: "/projects", icon: Kanban },
-    { title: t("sidebar.notifications"), url: "/notifications", icon: Bell },
+    { title: t("sidebar.notifications"), url: "/admin/notifications", icon: Bell },
     { title: t("sidebar.chat"), url: "/chat", icon: MessagesSquare },
   ];
 
@@ -75,9 +75,12 @@ export function AdminSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border pb-4">
         <div className="flex items-center gap-2 px-2">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary text-primary-foreground shrink-0">
-            <Kanban className="h-4 w-4" />
-          </div>
+          <Avatar className="h-8 w-8 shrink-0 rounded-lg">
+            <AvatarImage src="/Logo/logo.png" alt={t("sidebar.adminTitle")} className="object-cover" />
+            <AvatarFallback className="rounded-lg bg-primary/10 text-primary text-xs">
+              KF
+            </AvatarFallback>
+          </Avatar>
           {!collapsed && <span className="font-bold text-lg">{t("sidebar.adminTitle")}</span>}
         </div>
       </SidebarHeader>
