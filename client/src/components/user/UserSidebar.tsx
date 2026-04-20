@@ -35,7 +35,7 @@ export function UserSidebar() {
     { title: t("sidebar.myTasks"), url: "/my-tasks", icon: LayoutList },
     { title: t("sidebar.notifications"), url: "/notifications", icon: Bell },
     { title: t("sidebar.chat"), url: "/chat", icon: MessagesSquare },
-    { title: "Profile", url: "/profile", icon: UserRound },
+    { title: t("sidebar.profile"), url: "/profile", icon: UserRound },
   ];
 
   const signOut = async () => {

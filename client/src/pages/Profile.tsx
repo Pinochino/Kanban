@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useI18n } from "@/i18n/I18nProvider";
 import { useAppDispatch } from "@/store/hooks";
 import { setCurrentUser } from "@/store/slice/AuthSlice";
 import { IUser } from "@/types/UserInterface";
@@ -46,6 +47,7 @@ const normalizeError = (error: unknown, fallback: string) => {
 export default function Profile() {
   const dispatch = useAppDispatch();
   const { user } = useCurrentUser();
+  const { t } = useI18n();
 
   const [username, setUsername] = useState(user?.username ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
@@ -84,7 +86,7 @@ export default function Profile() {
   const updateProfileMutation = useMutation({
     mutationFn: async () => {
       if (!user?.id) {
-        throw new Error("Không tìm thấy tài khoản hiện tại.");
+        throw new Error(t("profile.currentAccountNotFound"));
       }
 
       const formData = new FormData();
@@ -115,10 +117,10 @@ export default function Profile() {
       dispatch(setCurrentUser(updatedUser));
       setSelectedAvatarFile(null);
       setPassword("");
-      toast.success("Đã cập nhật thông tin cá nhân.");
+      toast.success(t("profile.updateSuccess"));
     },
     onError: (error) => {
-      toast.error(normalizeError(error, "Cập nhật hồ sơ thất bại."));
+      toast.error(normalizeError(error, t("profile.updateFailed")));
     },
   });
 
@@ -128,12 +130,12 @@ export default function Profile() {
     }
 
     if (!file.type.startsWith("image/")) {
-      toast.error("Vui lòng chọn file ảnh hợp lệ.");
+      toast.error(t("profile.invalidImage"));
       return;
     }
 
     if (file.size > MAX_AVATAR_SIZE) {
-      toast.error("Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 5MB.");
+      toast.error(t("profile.avatarTooLarge"));
       return;
     }
 
@@ -153,22 +155,22 @@ export default function Profile() {
     event.preventDefault();
 
     if (!user?.id) {
-      toast.error("Không tìm thấy tài khoản hiện tại.");
+      toast.error(t("profile.currentAccountNotFound"));
       return;
     }
 
     if (!username.trim()) {
-      toast.error("Username không được để trống.");
+      toast.error(t("profile.usernameRequired"));
       return;
     }
 
     if (!email.trim()) {
-      toast.error("Email không được để trống.");
+      toast.error(t("profile.emailRequired"));
       return;
     }
 
     if (!hasChanges) {
-      toast.message("Không có thay đổi để lưu.");
+      toast.message(t("profile.noChanges"));
       return;
     }
 
@@ -179,18 +181,18 @@ export default function Profile() {
     <div className="mx-auto w-full max-w-3xl space-y-6">
       <Card className="border-0 bg-gradient-to-r from-cyan-600 via-sky-600 to-indigo-600 text-white shadow-xl">
         <CardHeader>
-          <CardTitle className="text-2xl">Profile</CardTitle>
+          <CardTitle className="text-2xl">{t("profile.title")}</CardTitle>
           <CardDescription className="text-cyan-100">
-            Cập nhật thông tin cá nhân, mật khẩu và ảnh đại diện của bạn.
+            {t("profile.description")}
           </CardDescription>
         </CardHeader>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Thông tin cá nhân</CardTitle>
+          <CardTitle>{t("profile.infoTitle")}</CardTitle>
           <CardDescription>
-            Những thay đổi ở đây sẽ cập nhật cho tài khoản hiện tại.
+            {t("profile.infoDescription")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -198,12 +200,12 @@ export default function Profile() {
             <div className="flex flex-col gap-4 rounded-lg border border-dashed p-4 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-3">
                 <Avatar className="h-20 w-20 border">
-                  <AvatarImage src={avatarPreview || user?.avatarUrl || ""} alt={user?.username || "User"} />
+                  <AvatarImage src={avatarPreview || user?.avatarUrl || ""} alt={user?.username || t("profile.userFallback")} />
                   <AvatarFallback className="text-lg">{getInitials(username || user?.username)}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="font-medium">Ảnh đại diện</p>
-                  <p className="text-sm text-muted-foreground">JPG, PNG, WEBP - tối đa 5MB.</p>
+                  <p className="font-medium">{t("profile.avatar")}</p>
+                  <p className="text-sm text-muted-foreground">{t("profile.avatarHint")}</p>
                 </div>
               </div>
 
@@ -217,42 +219,42 @@ export default function Profile() {
                 />
                 <Button type="button" variant="outline" onClick={() => avatarInputRef.current?.click()}>
                   <Upload className="h-4 w-4" />
-                  Chọn ảnh
+                  {t("profile.chooseAvatar")}
                 </Button>
               </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="profile-username">Username</Label>
+                <Label htmlFor="profile-username">{t("profile.username")}</Label>
                 <Input
                   id="profile-username"
                   value={username}
                   onChange={(event) => setUsername(event.target.value)}
-                  placeholder="Nhập username"
+                  placeholder={t("profile.usernamePlaceholder")}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="profile-email">Email</Label>
+                <Label htmlFor="profile-email">{t("profile.email")}</Label>
                 <Input
                   id="profile-email"
                   type="email"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
-                  placeholder="Nhập email"
+                  placeholder={t("profile.emailPlaceholder")}
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="profile-password">Mật khẩu mới (không bắt buộc)</Label>
+              <Label htmlFor="profile-password">{t("profile.newPasswordOptional")}</Label>
               <Input
                 id="profile-password"
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                placeholder="Để trống nếu không đổi mật khẩu"
+                placeholder={t("profile.passwordPlaceholder")}
                 autoComplete="new-password"
               />
             </div>
@@ -262,10 +264,10 @@ export default function Profile() {
                 {updateProfileMutation.isPending ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Đang lưu...
+                    {t("profile.saving")}
                   </>
                 ) : (
-                  "Lưu thay đổi"
+                  t("profile.saveChanges")
                 )}
               </Button>
             </div>

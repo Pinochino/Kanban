@@ -46,7 +46,7 @@ type SendMessagePayload =
 
 const ChatPage = () => {
   const { user, isAdmin } = useCurrentUser();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<ChatTab>("direct");
   const [contactSearch, setContactSearch] = useState("");
@@ -223,7 +223,7 @@ const ChatPage = () => {
       await queryClient.invalidateQueries({ queryKey: conversationQueryKey });
     },
     onError: () => {
-      toast.error("Không thể gửi tin nhắn.");
+      toast.error(language === "vi" ? "Không thể gửi tin nhắn." : "Unable to send message.");
     },
   });
 
@@ -245,7 +245,7 @@ const ChatPage = () => {
       return response.data?.data as IChatGroup;
     },
     onSuccess: async (createdGroup) => {
-      toast.success("Đã tạo nhóm chat.");
+      toast.success(language === "vi" ? "Đã tạo nhóm chat." : "Chat group created.");
       queryClient.setQueryData<IChatGroup[]>([apiName.chats.groups], (current) => {
         const nextGroup = createdGroup;
 
@@ -270,7 +270,7 @@ const ChatPage = () => {
       await queryClient.invalidateQueries({ queryKey: [apiName.chats.groups] });
     },
     onError: () => {
-      toast.error("Không thể tạo nhóm chat.");
+      toast.error(language === "vi" ? "Không thể tạo nhóm chat." : "Unable to create chat group.");
     },
   });
 
@@ -377,7 +377,7 @@ const ChatPage = () => {
     const normalized = String(roleName ?? "").toUpperCase();
 
     if (normalized === "ADMIN" || normalized === "SUPER_ADMIN") {
-      return "Quản trị viên";
+      return language === "vi" ? "Quản trị viên" : t("common.admin");
     }
 
     if (normalized === "USER") {
@@ -394,8 +394,75 @@ const ChatPage = () => {
   const activeConversationSubtitle = activeTab === "direct"
     ? selectedDirectContact?.email
     : selectedGroup
-      ? `${selectedGroup.memberCount} thành viên`
+      ? language === "vi"
+        ? `${selectedGroup.memberCount} thành viên`
+        : `${selectedGroup.memberCount} members`
       : undefined;
+
+  const chatCopy = {
+    intro: language === "vi" ? "Trò chuyện nội bộ" : "Internal chat",
+    title:
+      language === "vi"
+        ? "Nhắn tin giữa quản trị viên, nhân viên và nhóm thành viên"
+        : "Message admins, staff, and team groups",
+    description:
+      language === "vi"
+        ? "Gửi tin nhắn riêng tư hoặc trò chuyện theo nhóm. Nhóm mới có thể được tạo ngay trong màn hình chat để các thành viên trao đổi với nhau."
+        : "Send private messages or group chats. New groups can be created directly here so members can collaborate.",
+    directCount: language === "vi" ? "Cá nhân" : "Direct",
+    groupCount: language === "vi" ? "Nhóm" : "Groups",
+    mode: language === "vi" ? "Chế độ" : "Mode",
+    online: language === "vi" ? "Trực tuyến" : "Online",
+    loading: language === "vi" ? "Đang tải..." : "Loading...",
+    noContacts: language === "vi" ? "Không có liên hệ phù hợp." : "No matching contacts.",
+    noMessages: language === "vi" ? "Chưa có tin nhắn nào. Hãy gửi tin nhắn đầu tiên." : "No messages yet. Send the first message.",
+    searchContacts: language === "vi" ? "Tìm theo tên, email, vai trò..." : "Search by name, email, or role...",
+    searchGroups: language === "vi" ? "Tìm theo tên nhóm, mô tả hoặc người tạo..." : "Search by group name, description, or creator...",
+    contactsTitle: language === "vi" ? "Danh sách liên hệ" : "Contacts",
+    groupsTitle: language === "vi" ? "Nhóm chat" : "Chat groups",
+    groupsDescription: language === "vi" ? "Tạo nhóm để các thành viên trao đổi với nhau." : "Create groups so members can collaborate.",
+    createGroup: language === "vi" ? "Tạo nhóm" : "Create group",
+    createGroupTitle: language === "vi" ? "Tạo nhóm chat" : "Create chat group",
+    createGroupDescription:
+      language === "vi"
+        ? "Chọn các thành viên sẽ tham gia nhóm. Bạn sẽ được thêm tự động vào nhóm vừa tạo."
+        : "Choose the members who will join the group. You will be added automatically.",
+    groupNameLabel: language === "vi" ? "Tên nhóm" : "Group name",
+    groupNamePlaceholder: language === "vi" ? "Ví dụ: Nhóm sprint 12" : "Example: Sprint 12 team",
+    groupDescriptionLabel: language === "vi" ? "Mô tả" : "Description",
+    groupDescriptionPlaceholder:
+      language === "vi" ? "Mô tả ngắn cho nhóm trò chuyện" : "Short description for this chat group",
+    selectedMembers: language === "vi" ? "Đã chọn" : "Selected",
+    members: language === "vi" ? "thành viên" : "members",
+    searchMembers: language === "vi" ? "Tìm thành viên theo tên hoặc email..." : "Search members by name or email...",
+    noMembers: language === "vi" ? "Không có thành viên phù hợp." : "No matching members.",
+    cancel: language === "vi" ? "Hủy" : "Cancel",
+    creating: language === "vi" ? "Đang tạo" : "Creating",
+    createGroupAction: language === "vi" ? "Tạo nhóm" : "Create group",
+    noConversationTitle: language === "vi" ? "Chọn một cuộc trò chuyện để bắt đầu" : "Select a conversation to start",
+    noConversationBody:
+      language === "vi" ? "Tin nhắn riêng hoặc nhóm sẽ hiển thị tại đây." : "Private or group messages will appear here.",
+    unread: language === "vi" ? "chưa đọc" : "unread",
+    noHistory: language === "vi" ? "Chưa có tin nhắn nào. Hãy gửi tin nhắn đầu tiên." : "No messages yet. Send the first message.",
+    sentToDirect:
+      language === "vi"
+        ? (name: string) => `Nhắn cho ${name}... (Enter để gửi, Shift+Enter để xuống dòng)`
+        : (name: string) => `Message ${name}... (Enter to send, Shift+Enter for a new line)`,
+    sentToGroup:
+      language === "vi"
+        ? (name: string) => `Nhắn trong nhóm ${name}... (Enter để gửi, Shift+Enter để xuống dòng)`
+        : (name: string) => `Message in ${name}... (Enter to send, Shift+Enter for a new line)`,
+    directHint:
+      language === "vi"
+        ? "Tin nhắn sẽ gửi riêng cho người bạn đang chọn."
+        : "This message will be sent privately to the selected person.",
+    groupHint:
+      language === "vi"
+        ? "Tin nhắn sẽ hiển thị cho tất cả thành viên trong nhóm."
+        : "This message will be visible to everyone in the group.",
+    sending: language === "vi" ? "Đang gửi" : "Sending",
+    send: language === "vi" ? "Gửi" : "Send",
+  } as const;
 
   return (
     <div className="space-y-6">
@@ -404,27 +471,24 @@ const ChatPage = () => {
           <div className="space-y-2">
             <p className="inline-flex items-center gap-2 text-sm text-slate-200">
               <MessageSquare className="h-4 w-4" />
-              Trò chuyện nội bộ
+              {chatCopy.intro}
             </p>
-            <h1 className="text-2xl font-semibold md:text-3xl">Nhắn tin giữa quản trị viên, nhân viên và nhóm thành viên</h1>
-            <p className="max-w-2xl text-sm text-slate-200">
-              Gửi tin nhắn riêng tư hoặc trò chuyện theo nhóm. Nhóm mới có thể được tạo ngay trong màn hình chat để các
-              thành viên trao đổi với nhau.
-            </p>
+            <h1 className="text-2xl font-semibold md:text-3xl">{chatCopy.title}</h1>
+            <p className="max-w-2xl text-sm text-slate-200">{chatCopy.description}</p>
           </div>
 
           <div className="grid gap-2 sm:grid-cols-3">
             <div className="rounded-xl border border-white/10 bg-white/10 px-4 py-3">
-              <p className="text-xs text-slate-200">Cá nhân</p>
+              <p className="text-xs text-slate-200">{chatCopy.directCount}</p>
               <p className="text-2xl font-semibold">{contacts.length}</p>
             </div>
             <div className="rounded-xl border border-white/10 bg-white/10 px-4 py-3">
-              <p className="text-xs text-slate-200">Nhóm</p>
+              <p className="text-xs text-slate-200">{chatCopy.groupCount}</p>
               <p className="text-2xl font-semibold">{groups.length}</p>
             </div>
             <div className="rounded-xl border border-white/10 bg-white/10 px-4 py-3">
-              <p className="text-xs text-slate-200">Chế độ</p>
-              <p className="text-2xl font-semibold">{isAdmin ? "Quản trị viên" : "Nhân viên"}</p>
+              <p className="text-xs text-slate-200">{chatCopy.mode}</p>
+              <p className="text-2xl font-semibold">{isAdmin ? t("common.admin") : t("common.user")}</p>
             </div>
           </div>
         </CardContent>
@@ -435,14 +499,14 @@ const ChatPage = () => {
           <CardContent className="space-y-4 p-4">
             <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ChatTab)} className="space-y-4">
               <TabsList className="grid w-full grid-cols-2 bg-muted/60">
-                <TabsTrigger value="direct">Cá nhân</TabsTrigger>
-                <TabsTrigger value="group">Nhóm</TabsTrigger>
+                <TabsTrigger value="direct">{chatCopy.directCount}</TabsTrigger>
+                <TabsTrigger value="group">{chatCopy.groupCount}</TabsTrigger>
               </TabsList>
 
               <TabsContent value="direct" className="mt-0 space-y-4">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-base font-semibold">Danh sách liên hệ</h2>
+                    <h2 className="text-base font-semibold">{chatCopy.contactsTitle}</h2>
                     <Badge variant="secondary">{filteredContacts.length}</Badge>
                   </div>
                   <div className="relative">
@@ -450,7 +514,7 @@ const ChatPage = () => {
                     <Input
                       value={contactSearch}
                       onChange={(event) => setContactSearch(event.target.value)}
-                      placeholder="Tìm theo tên, email, vai trò..."
+                      placeholder={chatCopy.searchContacts}
                       className="pl-10"
                     />
                   </div>
@@ -470,7 +534,7 @@ const ChatPage = () => {
                       ))
                     ) : filteredContacts.length === 0 ? (
                       <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-                        Không có liên hệ phù hợp.
+                        {chatCopy.noContacts}
                       </div>
                     ) : (
                       filteredContacts.map((contact) => {
@@ -508,10 +572,12 @@ const ChatPage = () => {
                                 ) : null}
                               </div>
                               <p className="truncate text-xs text-muted-foreground">{contact.email}</p>
-                              <p className="truncate text-xs text-muted-foreground">{contact.lastMessagePreview || "Chưa có tin nhắn"}</p>
+                              <p className="truncate text-xs text-muted-foreground">
+                                {contact.lastMessagePreview || (language === "vi" ? "Chưa có tin nhắn" : "No messages yet")}
+                              </p>
                               <div className="flex items-center justify-between text-[11px] text-muted-foreground">
                                 <span>{contact.lastMessageAt ? formatTime(contact.lastMessageAt) : ""}</span>
-                                <span>{contact.unreadCount > 0 ? `${contact.unreadCount} chưa đọc` : ""}</span>
+                                <span>{contact.unreadCount > 0 ? `${contact.unreadCount} ${chatCopy.unread}` : ""}</span>
                               </div>
                             </div>
                           </button>
@@ -526,49 +592,47 @@ const ChatPage = () => {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <h2 className="text-base font-semibold">Nhóm chat</h2>
-                      <p className="text-xs text-muted-foreground">Tạo nhóm để các thành viên trao đổi với nhau.</p>
+                      <h2 className="text-base font-semibold">{chatCopy.groupsTitle}</h2>
+                      <p className="text-xs text-muted-foreground">{chatCopy.groupsDescription}</p>
                     </div>
                     <Dialog open={createGroupOpen} onOpenChange={setCreateGroupOpen}>
                       <DialogTrigger asChild>
                         <Button size="sm" className="gap-2">
                           <Plus className="h-4 w-4" />
-                          Tạo nhóm
+                          {chatCopy.createGroup}
                         </Button>
                       </DialogTrigger>
                       <DialogContent className="max-w-3xl">
                         <DialogHeader>
-                          <DialogTitle>Tạo nhóm chat</DialogTitle>
-                          <DialogDescription>
-                            Chọn các thành viên sẽ tham gia nhóm. Bạn sẽ được thêm tự động vào nhóm vừa tạo.
-                          </DialogDescription>
+                          <DialogTitle>{chatCopy.createGroupTitle}</DialogTitle>
+                          <DialogDescription>{chatCopy.createGroupDescription}</DialogDescription>
                         </DialogHeader>
 
                         <div className="grid gap-4 md:grid-cols-2">
                           <div className="space-y-4">
                             <div className="space-y-2">
-                              <Label htmlFor="group-name">Tên nhóm</Label>
+                              <Label htmlFor="group-name">{chatCopy.groupNameLabel}</Label>
                               <Input
                                 id="group-name"
                                 value={groupName}
                                 onChange={(event) => setGroupName(event.target.value)}
-                                placeholder="Ví dụ: Nhóm sprint 12"
+                                placeholder={chatCopy.groupNamePlaceholder}
                               />
                             </div>
 
                             <div className="space-y-2">
-                              <Label htmlFor="group-description">Mô tả</Label>
+                              <Label htmlFor="group-description">{chatCopy.groupDescriptionLabel}</Label>
                               <Textarea
                                 id="group-description"
                                 value={groupDescription}
                                 onChange={(event) => setGroupDescription(event.target.value)}
-                                placeholder="Mô tả ngắn cho nhóm trò chuyện"
+                                placeholder={chatCopy.groupDescriptionPlaceholder}
                                 className="min-h-[120px]"
                               />
                             </div>
 
                             <div className="rounded-xl border bg-muted/30 p-3 text-sm text-muted-foreground">
-                              Đã chọn <span className="font-semibold text-foreground">{selectedMemberIds.length}</span> thành viên.
+                              {chatCopy.selectedMembers} <span className="font-semibold text-foreground">{selectedMemberIds.length}</span> {chatCopy.members}.
                             </div>
                           </div>
 
@@ -578,7 +642,7 @@ const ChatPage = () => {
                               <Input
                                 value={memberSearch}
                                 onChange={(event) => setMemberSearch(event.target.value)}
-                                placeholder="Tìm thành viên theo tên hoặc email..."
+                                placeholder={chatCopy.searchMembers}
                                 className="pl-10"
                               />
                             </div>
@@ -597,7 +661,7 @@ const ChatPage = () => {
                                   ))
                                 ) : memberCandidates.length === 0 ? (
                                   <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-                                    Không có thành viên phù hợp.
+                                    {chatCopy.noMembers}
                                   </div>
                                 ) : (
                                   memberCandidates.map((contact) => {
@@ -647,7 +711,7 @@ const ChatPage = () => {
 
                         <DialogFooter>
                           <Button variant="outline" onClick={() => setCreateGroupOpen(false)}>
-                            Hủy
+                            {chatCopy.cancel}
                           </Button>
                           <Button
                             onClick={() => void createGroupMutation.mutateAsync()}
@@ -656,10 +720,10 @@ const ChatPage = () => {
                             {createGroupMutation.isPending ? (
                               <span className="inline-flex items-center gap-2">
                                 <Loader2 className="h-4 w-4 animate-spin" />
-                                Đang tạo
+                                {chatCopy.creating}
                               </span>
                             ) : (
-                              "Tạo nhóm"
+                              chatCopy.createGroupAction
                             )}
                           </Button>
                         </DialogFooter>
@@ -672,7 +736,7 @@ const ChatPage = () => {
                     <Input
                       value={groupSearch}
                       onChange={(event) => setGroupSearch(event.target.value)}
-                      placeholder="Tìm theo tên nhóm, mô tả hoặc người tạo..."
+                      placeholder={chatCopy.searchGroups}
                       className="pl-10"
                     />
                   </div>
@@ -692,7 +756,7 @@ const ChatPage = () => {
                       ))
                     ) : filteredGroups.length === 0 ? (
                       <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-                        Chưa có nhóm trò chuyện nào.
+                        {language === "vi" ? "Chưa có nhóm trò chuyện nào." : "No chat groups yet."}
                       </div>
                     ) : (
                       filteredGroups.map((group) => {
@@ -716,17 +780,17 @@ const ChatPage = () => {
                               <div className="flex items-center justify-between gap-2">
                                 <p className="truncate font-medium">{group.name}</p>
                                 <Badge variant="outline" className="h-5 text-[10px]">
-                                  {group.memberCount} thành viên
+                                  {group.memberCount} {chatCopy.members}
                                 </Badge>
                               </div>
                               <p className="truncate text-xs text-muted-foreground">
-                                {group.description || `Tạo bởi ${group.creatorName || "hệ thống"}`}
+                                {group.description || (language === "vi" ? `Tạo bởi ${group.creatorName || "hệ thống"}` : `Created by ${group.creatorName || "system"}`)}
                               </p>
                               <p className="truncate text-xs text-muted-foreground">
-                                {group.lastMessagePreview || "Chưa có tin nhắn"}
+                                {group.lastMessagePreview || (language === "vi" ? "Chưa có tin nhắn" : "No messages yet")}
                               </p>
                               <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                                <span>{group.creatorName ? `Người tạo: ${group.creatorName}` : ""}</span>
+                                <span>{group.creatorName ? (language === "vi" ? `Người tạo: ${group.creatorName}` : `Creator: ${group.creatorName}`) : ""}</span>
                                 <span>{group.lastMessageAt ? formatTime(group.lastMessageAt) : ""}</span>
                               </div>
                             </div>
@@ -747,8 +811,8 @@ const ChatPage = () => {
               <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center text-muted-foreground">
                 <Users className="h-10 w-10" />
                 <div>
-                  <p className="font-medium text-foreground">Chọn một cuộc trò chuyện để bắt đầu</p>
-                  <p className="text-sm">Tin nhắn riêng hoặc nhóm sẽ hiển thị tại đây.</p>
+                  <p className="font-medium text-foreground">{chatCopy.noConversationTitle}</p>
+                  <p className="text-sm">{chatCopy.noConversationBody}</p>
                 </div>
               </div>
             ) : (
@@ -762,9 +826,9 @@ const ChatPage = () => {
                       <div className="flex items-center gap-2">
                         <h2 className="font-semibold">{activeConversationTitle}</h2>
                         {activeTab === "group" ? (
-                          <Badge variant="secondary">Nhóm</Badge>
+                          <Badge variant="secondary">{chatCopy.groupCount}</Badge>
                         ) : selectedDirectContact?.roleName ? (
-                            <Badge variant="secondary">{getRoleLabel(selectedDirectContact.roleName)}</Badge>
+                          <Badge variant="secondary">{getRoleLabel(selectedDirectContact.roleName)}</Badge>
                         ) : null}
                       </div>
                       <p className="text-xs text-muted-foreground">{activeConversationSubtitle}</p>
@@ -775,10 +839,10 @@ const ChatPage = () => {
                     {isFetching ? (
                       <span className="inline-flex items-center gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        Đang tải...
+                        {chatCopy.loading}
                       </span>
                     ) : (
-                      "Trực tuyến"
+                      chatCopy.online
                     )}
                   </div>
                 </div>
@@ -796,7 +860,7 @@ const ChatPage = () => {
                       ))
                     ) : (conversationPage?.items ?? []).length === 0 ? (
                       <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-                        Chưa có tin nhắn nào. Hãy gửi tin nhắn đầu tiên.
+                        {chatCopy.noMessages}
                       </div>
                     ) : (
                       conversationPage?.items.map((chatMessage) => {
@@ -814,7 +878,7 @@ const ChatPage = () => {
                             >
                               <div className="mb-1 flex items-center justify-between gap-3 text-[11px] opacity-80">
                                 <span className="font-medium">
-                                    {isMine ? "Bạn" : chatMessage.senderName}
+                                  {isMine ? (language === "vi" ? "Bạn" : "You") : chatMessage.senderName}
                                 </span>
                                 <span>{formatTime(chatMessage.createdAt)}</span>
                               </div>
@@ -834,18 +898,12 @@ const ChatPage = () => {
                       value={message}
                       onChange={(event) => setMessage(event.target.value)}
                       onKeyDown={handleKeyDown}
-                      placeholder={
-                        activeTab === "direct"
-                          ? `Nhắn cho ${activeConversationTitle}... (Enter để gửi, Shift+Enter để xuống dòng)`
-                          : `Nhắn trong nhóm ${activeConversationTitle}... (Enter để gửi, Shift+Enter để xuống dòng)`
-                      }
+                      placeholder={activeTab === "direct" ? chatCopy.sentToDirect(activeConversationTitle) : chatCopy.sentToGroup(activeConversationTitle)}
                       className="min-h-[100px] resize-none"
                     />
                     <div className="flex items-center justify-between gap-3">
                       <p className="text-xs text-muted-foreground">
-                        {activeTab === "direct"
-                          ? "Tin nhắn sẽ gửi riêng cho người bạn đang chọn."
-                          : "Tin nhắn sẽ hiển thị cho tất cả thành viên trong nhóm."}
+                        {activeTab === "direct" ? chatCopy.directHint : chatCopy.groupHint}
                       </p>
                       <Button
                         onClick={() => void handleSend()}
@@ -855,12 +913,12 @@ const ChatPage = () => {
                         {sendMessageMutation.isPending ? (
                           <span className="inline-flex items-center gap-2">
                             <Loader2 className="h-4 w-4 animate-spin" />
-                            Đang gửi
+                            {chatCopy.sending}
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-2">
                             <Send className="h-4 w-4" />
-                            Gửi
+                            {chatCopy.send}
                           </span>
                         )}
                       </Button>
