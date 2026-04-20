@@ -31,4 +31,16 @@ public class TaskAttachment extends AbstractEntity implements Serializable {
     @JoinColumn(name = "task_id")
     @JsonBackReference
     Task task;
+
+    @Column(nullable = false)
+    String fileName;
+
+    @Column(nullable = false, length = 1000)
+    String fileUrl;
+
+    @Column(nullable = false)
+    Long fileSize;
+
+    @Column(nullable = false)
+    String mimeType;
 }

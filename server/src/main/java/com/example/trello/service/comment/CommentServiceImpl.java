@@ -1,5 +1,6 @@
 package com.example.trello.service.comment;
 
+import com.example.trello.constants.ActionType;
 import com.example.trello.constants.ErrorCode;
 import com.example.trello.dto.request.CommentRequest;
 import com.example.trello.dto.response.AccountAssignedProjectResponse;
@@ -10,6 +11,7 @@ import com.example.trello.model.Comment;
 import com.example.trello.model.Task;
 import com.example.trello.repository.CommentRepository;
 import com.example.trello.repository.TaskRepository;
+import com.example.trello.service.taskactivity.TaskActivityService;
 import com.example.trello.utils.JwtUtil;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +28,7 @@ public class CommentServiceImpl implements CommentService {
     CommentRepository commentRepository;
     TaskRepository taskRepository;
     JwtUtil jwtUtil;
+        TaskActivityService taskActivityService;
 
     @Override
     public List<CommentResponse> getCommentsByTaskId(Long taskId) {
@@ -50,14 +53,18 @@ public class CommentServiceImpl implements CommentService {
 
         comment = commentRepository.save(comment);
 
+                taskActivityService.log(task, account, ActionType.COMMENT, "Added a comment.");
+
         return toResponse(comment);
     }
 
     private CommentResponse toResponse(Comment comment) {
-        AccountAssignedProjectResponse author = new AccountAssignedProjectResponse(
-                comment.getAccount().getId(),
-                comment.getAccount().getUsername()
-        );
+        AccountAssignedProjectResponse author = comment.getAccount() == null
+                ? null
+                : new AccountAssignedProjectResponse(
+                        comment.getAccount().getId(),
+                        comment.getAccount().getUsername()
+                );
 
         return CommentResponse.builder()
                 .id(comment.getId())

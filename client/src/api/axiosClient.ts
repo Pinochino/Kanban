@@ -1,8 +1,10 @@
 import { getAccessToken, setAccessToken } from '@/utils/JwtUtils';
 import axios from 'axios';
 
+const apiBaseUrl = String(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:9000/api').replace(/\/+$/, '');
+
 const axiosClient = axios.create({
-    baseURL: 'http://localhost:9000/api',
+    baseURL: apiBaseUrl,
     timeout: 10000,
     withCredentials: true
 });
@@ -63,7 +65,7 @@ axiosClient.interceptors.response.use(
 
             try {
                 // gọi API refresh (cookie tự gửi kèm)
-                const res = await axios.post("http://localhost:9000/api/auth/refresh-token", {}, {
+                const res = await axios.post(`${apiBaseUrl}/auth/refresh-token`, {}, {
                     withCredentials: true
                 });
 

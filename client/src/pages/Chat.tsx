@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useI18n } from "@/i18n/I18nProvider";
 import { cn } from "@/lib/utils";
 import {
   IChatContact,
@@ -45,6 +46,7 @@ type SendMessagePayload =
 
 const ChatPage = () => {
   const { user, isAdmin } = useCurrentUser();
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<ChatTab>("direct");
   const [contactSearch, setContactSearch] = useState("");
@@ -371,6 +373,20 @@ const ChatPage = () => {
     .map((memberId) => contacts.find((contact) => String(contact.id) === String(memberId)))
     .filter((contact): contact is IChatContact => Boolean(contact));
 
+  const getRoleLabel = (roleName?: string | null) => {
+    const normalized = String(roleName ?? "").toUpperCase();
+
+    if (normalized === "ADMIN" || normalized === "SUPER_ADMIN") {
+      return "Quản trị viên";
+    }
+
+    if (normalized === "USER") {
+      return t("common.user");
+    }
+
+    return roleName ?? "";
+  };
+
   const activeConversationTitle = activeTab === "direct"
     ? selectedDirectContact?.username
     : selectedGroup?.name;
@@ -388,26 +404,27 @@ const ChatPage = () => {
           <div className="space-y-2">
             <p className="inline-flex items-center gap-2 text-sm text-slate-200">
               <MessageSquare className="h-4 w-4" />
-              Chat nội bộ
+              Trò chuyện nội bộ
             </p>
-            <h1 className="text-2xl font-semibold md:text-3xl">Nhắn tin giữa admin, user và nhóm thành viên</h1>
+            <h1 className="text-2xl font-semibold md:text-3xl">Nhắn tin giữa quản trị viên, nhân viên và nhóm thành viên</h1>
             <p className="max-w-2xl text-sm text-slate-200">
-              Gửi tin nhắn riêng tư hoặc chat theo nhóm. Nhóm mới có thể được tạo ngay trong màn hình chat để các member trao đổi với nhau.
+              Gửi tin nhắn riêng tư hoặc trò chuyện theo nhóm. Nhóm mới có thể được tạo ngay trong màn hình chat để các
+              thành viên trao đổi với nhau.
             </p>
           </div>
 
           <div className="grid gap-2 sm:grid-cols-3">
             <div className="rounded-xl border border-white/10 bg-white/10 px-4 py-3">
-              <p className="text-xs text-slate-200">Direct</p>
+              <p className="text-xs text-slate-200">Cá nhân</p>
               <p className="text-2xl font-semibold">{contacts.length}</p>
             </div>
             <div className="rounded-xl border border-white/10 bg-white/10 px-4 py-3">
-              <p className="text-xs text-slate-200">Groups</p>
+              <p className="text-xs text-slate-200">Nhóm</p>
               <p className="text-2xl font-semibold">{groups.length}</p>
             </div>
             <div className="rounded-xl border border-white/10 bg-white/10 px-4 py-3">
-              <p className="text-xs text-slate-200">Mode</p>
-              <p className="text-2xl font-semibold">{isAdmin ? "Admin" : "User"}</p>
+              <p className="text-xs text-slate-200">Chế độ</p>
+              <p className="text-2xl font-semibold">{isAdmin ? "Quản trị viên" : "Nhân viên"}</p>
             </div>
           </div>
         </CardContent>
@@ -484,7 +501,11 @@ const ChatPage = () => {
                             <div className="min-w-0 flex-1 space-y-1">
                               <div className="flex items-center justify-between gap-2">
                                 <p className="truncate font-medium">{contact.username}</p>
-                                {contact.roleName ? <Badge variant="outline" className="h-5 text-[10px]">{contact.roleName}</Badge> : null}
+                                {contact.roleName ? (
+                                  <Badge variant="outline" className="h-5 text-[10px]">
+                                    {getRoleLabel(contact.roleName)}
+                                  </Badge>
+                                ) : null}
                               </div>
                               <p className="truncate text-xs text-muted-foreground">{contact.email}</p>
                               <p className="truncate text-xs text-muted-foreground">{contact.lastMessagePreview || "Chưa có tin nhắn"}</p>
@@ -506,7 +527,7 @@ const ChatPage = () => {
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <h2 className="text-base font-semibold">Nhóm chat</h2>
-                      <p className="text-xs text-muted-foreground">Tạo nhóm để các member trao đổi với nhau.</p>
+                      <p className="text-xs text-muted-foreground">Tạo nhóm để các thành viên trao đổi với nhau.</p>
                     </div>
                     <Dialog open={createGroupOpen} onOpenChange={setCreateGroupOpen}>
                       <DialogTrigger asChild>
@@ -519,7 +540,7 @@ const ChatPage = () => {
                         <DialogHeader>
                           <DialogTitle>Tạo nhóm chat</DialogTitle>
                           <DialogDescription>
-                            Chọn các member sẽ tham gia nhóm. Bạn sẽ được thêm tự động vào nhóm vừa tạo.
+                            Chọn các thành viên sẽ tham gia nhóm. Bạn sẽ được thêm tự động vào nhóm vừa tạo.
                           </DialogDescription>
                         </DialogHeader>
 
@@ -531,7 +552,7 @@ const ChatPage = () => {
                                 id="group-name"
                                 value={groupName}
                                 onChange={(event) => setGroupName(event.target.value)}
-                                placeholder="Ví dụ: Sprint 12 team"
+                                placeholder="Ví dụ: Nhóm sprint 12"
                               />
                             </div>
 
@@ -541,13 +562,13 @@ const ChatPage = () => {
                                 id="group-description"
                                 value={groupDescription}
                                 onChange={(event) => setGroupDescription(event.target.value)}
-                                placeholder="Mô tả ngắn cho nhóm chat"
+                                placeholder="Mô tả ngắn cho nhóm trò chuyện"
                                 className="min-h-[120px]"
                               />
                             </div>
 
                             <div className="rounded-xl border bg-muted/30 p-3 text-sm text-muted-foreground">
-                              Đã chọn <span className="font-semibold text-foreground">{selectedMemberIds.length}</span> member.
+                              Đã chọn <span className="font-semibold text-foreground">{selectedMemberIds.length}</span> thành viên.
                             </div>
                           </div>
 
@@ -557,7 +578,7 @@ const ChatPage = () => {
                               <Input
                                 value={memberSearch}
                                 onChange={(event) => setMemberSearch(event.target.value)}
-                                placeholder="Tìm member theo tên hoặc email..."
+                                placeholder="Tìm thành viên theo tên hoặc email..."
                                 className="pl-10"
                               />
                             </div>
@@ -576,7 +597,7 @@ const ChatPage = () => {
                                   ))
                                 ) : memberCandidates.length === 0 ? (
                                   <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-                                    Không có member phù hợp.
+                                    Không có thành viên phù hợp.
                                   </div>
                                 ) : (
                                   memberCandidates.map((contact) => {
@@ -671,7 +692,7 @@ const ChatPage = () => {
                       ))
                     ) : filteredGroups.length === 0 ? (
                       <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-                        Chưa có nhóm chat nào.
+                        Chưa có nhóm trò chuyện nào.
                       </div>
                     ) : (
                       filteredGroups.map((group) => {
@@ -695,7 +716,7 @@ const ChatPage = () => {
                               <div className="flex items-center justify-between gap-2">
                                 <p className="truncate font-medium">{group.name}</p>
                                 <Badge variant="outline" className="h-5 text-[10px]">
-                                  {group.memberCount} member
+                                  {group.memberCount} thành viên
                                 </Badge>
                               </div>
                               <p className="truncate text-xs text-muted-foreground">
@@ -705,7 +726,7 @@ const ChatPage = () => {
                                 {group.lastMessagePreview || "Chưa có tin nhắn"}
                               </p>
                               <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                                <span>{group.creatorName ? `Creator: ${group.creatorName}` : ""}</span>
+                                <span>{group.creatorName ? `Người tạo: ${group.creatorName}` : ""}</span>
                                 <span>{group.lastMessageAt ? formatTime(group.lastMessageAt) : ""}</span>
                               </div>
                             </div>
@@ -727,7 +748,7 @@ const ChatPage = () => {
                 <Users className="h-10 w-10" />
                 <div>
                   <p className="font-medium text-foreground">Chọn một cuộc trò chuyện để bắt đầu</p>
-                  <p className="text-sm">Tin nhắn 1-1 hoặc nhóm sẽ hiển thị tại đây.</p>
+                  <p className="text-sm">Tin nhắn riêng hoặc nhóm sẽ hiển thị tại đây.</p>
                 </div>
               </div>
             ) : (
@@ -743,7 +764,7 @@ const ChatPage = () => {
                         {activeTab === "group" ? (
                           <Badge variant="secondary">Nhóm</Badge>
                         ) : selectedDirectContact?.roleName ? (
-                          <Badge variant="secondary">{selectedDirectContact.roleName}</Badge>
+                            <Badge variant="secondary">{getRoleLabel(selectedDirectContact.roleName)}</Badge>
                         ) : null}
                       </div>
                       <p className="text-xs text-muted-foreground">{activeConversationSubtitle}</p>
@@ -757,7 +778,7 @@ const ChatPage = () => {
                         Đang tải...
                       </span>
                     ) : (
-                      "Live chat"
+                      "Trực tuyến"
                     )}
                   </div>
                 </div>
@@ -793,7 +814,7 @@ const ChatPage = () => {
                             >
                               <div className="mb-1 flex items-center justify-between gap-3 text-[11px] opacity-80">
                                 <span className="font-medium">
-                                  {isMine ? "Bạn" : chatMessage.senderName}
+                                    {isMine ? "Bạn" : chatMessage.senderName}
                                 </span>
                                 <span>{formatTime(chatMessage.createdAt)}</span>
                               </div>

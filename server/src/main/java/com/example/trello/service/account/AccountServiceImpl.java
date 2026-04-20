@@ -17,6 +17,7 @@ import com.example.trello.repository.TaskRepository;
 import com.example.trello.service.cloudinary.CloudinaryService;
 import com.example.trello.specifications.AccountSpecifications;
 import com.example.trello.specifications.filter.AccountFilter;
+import com.example.trello.utils.JwtUtil;
 import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -50,6 +52,7 @@ public class AccountServiceImpl implements AccountService {
     ProjectMemberRepository projectMemberRepository;
     TaskActivityRepository taskActivityRepository;
     CloudinaryService cloudinaryService;
+    JwtUtil jwtUtil;
 
     @Override
     public List<AccountResponse> getAccounts(AccountFilter request) {
@@ -57,6 +60,7 @@ public class AccountServiceImpl implements AccountService {
         Specification<Account> spec = Specification
                 .where(AccountSpecifications.filterByRoleId(request.getRoleId()))
                 .and(AccountSpecifications.filterByActive(request.getActive()))
+            .and(AccountSpecifications.filterById(request.getAccountId()))
                 .and(AccountSpecifications.filterByUsername(request.getUsername()))
             .and(AccountSpecifications.filterByLogin(request.getLogin()))
             .and(AccountSpecifications.filterByDeleted(false));
@@ -101,13 +105,35 @@ public class AccountServiceImpl implements AccountService {
     @Transactional
     @Override
     public void updateActiveAccount(Long id, boolean active) {
+        Account currentUser = jwtUtil.getCurrentUserLogin();
+        if (currentUser != null && Objects.equals(currentUser.getId(), id)) {
+            throw new AppError(ErrorCode.ACCOUNT_SELF_DEACTIVATION_NOT_ALLOWED);
+        }
 
         Account account = accountRepository
                 .findById(id)
                 .orElseThrow(() -> new AppError(ErrorCode.USER_NOT_FOUND));
 
+        boolean currentIsSuperAdmin = hasRole(currentUser, RoleName.SUPER_ADMIN);
+        boolean currentIsAdmin = hasRole(currentUser, RoleName.ADMIN);
+        boolean targetIsAdmin = hasRole(account, RoleName.ADMIN) || hasRole(account, RoleName.SUPER_ADMIN);
+
+        if (!currentIsSuperAdmin && currentIsAdmin && targetIsAdmin) {
+            throw new AppError(ErrorCode.ACCOUNT_ADMIN_MANAGE_ADMIN_NOT_ALLOWED);
+        }
+
         account.setActive(active);
         account = accountRepository.save(account);
+    }
+
+    private boolean hasRole(Account account, RoleName roleName) {
+        if (account == null || account.getRoles() == null) {
+            return false;
+        }
+
+        return account.getRoles().stream()
+                .filter(Objects::nonNull)
+                .anyMatch(role -> role.getName() == roleName);
     }
 
     @Override
@@ -193,6 +219,14 @@ public class AccountServiceImpl implements AccountService {
     @Transactional
     @Override
     public AccountResponse updateAccountProfile(Long accountId, UpdateAccountRequest request, MultipartFile avatarFile) {
+        Account currentUser = jwtUtil.getCurrentUserLogin();
+        boolean currentIsSuperAdmin = hasRole(currentUser, RoleName.SUPER_ADMIN);
+        boolean isUpdatingOwnProfile = currentUser != null && Objects.equals(currentUser.getId(), accountId);
+
+        if (!currentIsSuperAdmin && !isUpdatingOwnProfile) {
+            throw new AppError(ErrorCode.ACCOUNT_PROFILE_UPDATE_NOT_ALLOWED);
+        }
+
         Account account = accountRepository
                 .findById(accountId)
                 .orElseThrow(() -> new AppError(ErrorCode.USER_NOT_FOUND));

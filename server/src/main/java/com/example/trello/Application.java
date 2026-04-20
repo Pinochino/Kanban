@@ -1,6 +1,5 @@
 package com.example.trello;
 
-
 import com.example.trello.config.DotenvApplicationInitializer;
 import com.example.trello.config.StorageProperties;
 import com.example.trello.service.file.FileService;

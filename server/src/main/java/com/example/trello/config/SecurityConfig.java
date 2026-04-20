@@ -72,6 +72,7 @@ public class SecurityConfig {
                         .requestMatchers(WHITE_LIST).permitAll()
                         .requestMatchers(HttpMethod.GET, "/projects/list", "/projects/detail/**", "/tasks/list", "/tasks/search", "/tasks/detail/**").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/tasks/update-status/**").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/accounts/update-profile/**").authenticated()
                         .requestMatchers(ADMIN_LIST).hasRole(RoleName.SUPER_ADMIN.name())
                         .anyRequest().authenticated()
                 )

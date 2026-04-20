@@ -8,6 +8,16 @@ import org.springframework.data.jpa.domain.Specification;
 
 public class AccountSpecifications {
 
+    public static Specification<Account> filterById(Long accountId) {
+        return (root, query, cb) -> {
+            if (accountId == null) {
+                return cb.conjunction();
+            }
+
+            return cb.equal(root.get("id"), accountId);
+        };
+    }
+
     public static Specification<Account> filterByUsername(String username) {
         return (root, query, cb) -> {
             if (username == null || username.trim().isEmpty()) {

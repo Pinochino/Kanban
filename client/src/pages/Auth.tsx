@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Kanban } from "lucide-react";
+import { useI18n } from "@/i18n/I18nProvider";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { RootState } from "@/store/store";
 import authService from "@/services/AuthService";
@@ -59,6 +59,7 @@ export default function Auth() {
   const navigate = useNavigate();
 
   const dispatch = useAppDispatch();
+  const { t } = useI18n();
   const { status: loginStatus } = useAppSelector((state: RootState) => state.auth.login);
 
   const { status: registerStatus } = useAppSelector((state: RootState) => state.auth.register);
@@ -76,15 +77,15 @@ export default function Auth() {
     const email = loginEmail.trim();
 
     if (!email) {
-      errors.email = "Vui lòng nhập email.";
+      errors.email = t("auth.emailRequired");
     } else if (!EMAIL_PATTERN.test(email)) {
-      errors.email = "Email không đúng định dạng.";
+      errors.email = t("auth.emailInvalid");
     }
 
     if (!loginPassword) {
-      errors.password = "Vui lòng nhập mật khẩu.";
+      errors.password = t("auth.passwordRequired");
     } else if (loginPassword.length < 6) {
-      errors.password = "Mật khẩu phải có ít nhất 6 ký tự.";
+      errors.password = t("auth.passwordMin");
     }
 
     return errors;
@@ -96,27 +97,27 @@ export default function Auth() {
     const email = registerEmail.trim();
 
     if (!name) {
-      errors.name = "Vui lòng nhập họ và tên.";
+      errors.name = t("auth.nameRequired");
     } else if (name.length < 2) {
-      errors.name = "Tên phải có ít nhất 2 ký tự.";
+      errors.name = t("auth.nameMin");
     }
 
     if (!email) {
-      errors.email = "Vui lòng nhập email.";
+      errors.email = t("auth.emailRequired");
     } else if (!EMAIL_PATTERN.test(email)) {
-      errors.email = "Email không đúng định dạng.";
+      errors.email = t("auth.emailInvalid");
     }
 
     if (!registerPassword) {
-      errors.password = "Vui lòng nhập mật khẩu.";
+      errors.password = t("auth.passwordRequired");
     } else if (registerPassword.length < 6) {
-      errors.password = "Mật khẩu phải có ít nhất 6 ký tự.";
+      errors.password = t("auth.passwordMin");
     }
 
     if (!registerConfirmPassword) {
-      errors.confirmPassword = "Vui lòng xác nhận mật khẩu.";
+      errors.confirmPassword = t("auth.confirmRequired");
     } else if (registerConfirmPassword !== registerPassword) {
-      errors.confirmPassword = "Mật khẩu xác nhận không khớp.";
+      errors.confirmPassword = t("auth.confirmMismatch");
     }
 
     return errors;
@@ -140,9 +141,9 @@ export default function Auth() {
       const account = await dispatch(authService.login({ ...loginPaylog })).unwrap();
 
       navigate(getHomePath(account));
-      toast.success("Đăng nhập thành công!");
+      toast.success(t("auth.loginSuccess"));
     } catch (err: unknown) {
-      const message = normalizeErrorMessage(err, "Đăng nhập thất bại. Vui lòng thử lại.");
+      const message = normalizeErrorMessage(err, t("auth.loginFailure"));
       toast.error(message);
     } finally {
       setLoginLoading(false);
@@ -167,10 +168,10 @@ export default function Auth() {
     try {
       const account = await dispatch(authService.register({ ...payload })).unwrap();
       navigate(getHomePath(account));
-      toast.success("Đăng kí thành công!");
+      toast.success(t("auth.registerSuccess"));
 
     } catch (err: unknown) {
-      const message = normalizeErrorMessage(err, "Đăng ký thất bại. Vui lòng thử lại.");
+      const message = normalizeErrorMessage(err, t("auth.registerFailure"));
       toast.error(message);
     } finally {
       setRegisterLoading(false);
@@ -179,13 +180,13 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10 p-4">
-      <Card className="w-full max-w-md shadow-xl border-0">
+        <Card className="w-full max-w-md border-0 shadow-xl">
         <CardHeader className="text-center space-y-2">
-          <div className="mx-auto flex items-center justify-center w-12 h-12 rounded-xl bg-primary text-primary-foreground mb-2">
-            <Kanban className="h-6 w-6" />
+          <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl bg-primary/10 ring-1 ring-border">
+            <img src="/Logo/logo.png" alt={t("auth.brand")} className="h-full w-full object-cover" />
           </div>
-          <CardTitle className="text-2xl font-bold">TaskFlow</CardTitle>
-          <CardDescription>Quản lý công việc hiệu quả</CardDescription>
+          <CardTitle className="text-2xl font-bold">{t("auth.brand")}</CardTitle>
+          <CardDescription>{t("auth.description")}</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs
@@ -199,14 +200,14 @@ export default function Auth() {
             }}
           >
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Đăng nhập</TabsTrigger>
-              <TabsTrigger value="register">Đăng ký</TabsTrigger>
+              <TabsTrigger value="login">{t("auth.loginTab")}</TabsTrigger>
+              <TabsTrigger value="register">{t("auth.registerTab")}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="login">
               <form onSubmit={handleLogin} className="space-y-4 mt-4">
                 <div className="space-y-2">
-                  <Label htmlFor="login-email">Email</Label>
+                  <Label htmlFor="login-email">{t("auth.loginEmailLabel")}</Label>
                   <Input
                     id="login-email"
                     type="email"
@@ -215,7 +216,7 @@ export default function Auth() {
                       setLoginEmail(e.target.value);
                       setLoginErrors((prev) => ({ ...prev, email: undefined }));
                     }}
-                    placeholder="you@example.com"
+                    placeholder={t("auth.emailPlaceholder")}
                     required
                     autoComplete="email"
                     aria-invalid={Boolean(loginErrors.email)}
@@ -223,7 +224,7 @@ export default function Auth() {
                   {loginErrors.email ? <p className="text-xs text-destructive">{loginErrors.email}</p> : null}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="login-password">Mật khẩu</Label>
+                  <Label htmlFor="login-password">{t("auth.loginPasswordLabel")}</Label>
                   <Input
                     id="login-password"
                     type="password"
@@ -240,7 +241,7 @@ export default function Auth() {
                   {loginErrors.password ? <p className="text-xs text-destructive">{loginErrors.password}</p> : null}
                 </div>
                 <Button type="submit" className="w-full" disabled={loginLoading}>
-                  {loginLoading ? "Đang xử lý..." : "Đăng nhập"}
+                  {loginLoading ? t("auth.loginLoading") : t("auth.loginButton")}
                 </Button>
               </form>
             </TabsContent>
@@ -248,7 +249,7 @@ export default function Auth() {
             <TabsContent value="register">
               <form onSubmit={handleRegister} className="space-y-4 mt-4">
                 <div className="space-y-2">
-                  <Label htmlFor="register-name">Họ và tên</Label>
+                  <Label htmlFor="register-name">{t("auth.registerNameLabel")}</Label>
                   <Input
                     id="register-name"
                     value={registerName}
@@ -256,14 +257,14 @@ export default function Auth() {
                       setRegisterName(e.target.value);
                       setRegisterErrors((prev) => ({ ...prev, name: undefined }));
                     }}
-                    placeholder="Nguyễn Văn A"
+                    placeholder={t("auth.fullNamePlaceholder")}
                     required
                     aria-invalid={Boolean(registerErrors.name)}
                   />
                   {registerErrors.name ? <p className="text-xs text-destructive">{registerErrors.name}</p> : null}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="register-email">Email</Label>
+                  <Label htmlFor="register-email">{t("auth.registerEmailLabel")}</Label>
                   <Input
                     id="register-email"
                     type="email"
@@ -272,7 +273,7 @@ export default function Auth() {
                       setRegisterEmail(e.target.value);
                       setRegisterErrors((prev) => ({ ...prev, email: undefined }));
                     }}
-                    placeholder="you@example.com"
+                    placeholder={t("auth.emailPlaceholder")}
                     required
                     autoComplete="email"
                     aria-invalid={Boolean(registerErrors.email)}
@@ -280,7 +281,7 @@ export default function Auth() {
                   {registerErrors.email ? <p className="text-xs text-destructive">{registerErrors.email}</p> : null}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="register-password">Mật khẩu</Label>
+                  <Label htmlFor="register-password">{t("auth.registerPasswordLabel")}</Label>
                   <Input
                     id="register-password"
                     type="password"
@@ -289,7 +290,7 @@ export default function Auth() {
                       setRegisterPassword(e.target.value);
                       setRegisterErrors((prev) => ({ ...prev, password: undefined }));
                     }}
-                    placeholder="Tối thiểu 6 ký tự"
+                    placeholder={t("auth.passwordPlaceholder")}
                     minLength={6}
                     required
                     autoComplete="new-password"
@@ -299,7 +300,7 @@ export default function Auth() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="register-confirm-password">Xác nhận mật khẩu</Label>
+                  <Label htmlFor="register-confirm-password">{t("auth.registerConfirmLabel")}</Label>
                   <Input
                     id="register-confirm-password"
                     type="password"
@@ -308,7 +309,7 @@ export default function Auth() {
                       setRegisterConfirmPassword(e.target.value);
                       setRegisterErrors((prev) => ({ ...prev, confirmPassword: undefined }));
                     }}
-                    placeholder="Nhập lại mật khẩu"
+                    placeholder={t("auth.confirmPlaceholder")}
                     required
                     autoComplete="new-password"
                     aria-invalid={Boolean(registerErrors.confirmPassword)}
@@ -319,7 +320,7 @@ export default function Auth() {
                 </div>
 
                 <Button type="submit" className="w-full" disabled={registerLoading}>
-                  {registerLoading ? "Đang xử lý..." : "Đăng ký"}
+                  {registerLoading ? t("auth.registerSubmitting") : t("auth.registerButton")}
                 </Button>
               </form>
             </TabsContent>

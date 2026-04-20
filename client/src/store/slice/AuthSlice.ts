@@ -1,6 +1,7 @@
 import { IUser } from "@/types/UserInterface";
 import { createGenericSlice, GenericState } from "./BaseSlice";
 import authService from "@/services/AuthService";
+import { PayloadAction } from "@reduxjs/toolkit";
 
 interface AuthState {
     login: GenericState<IUser>;
@@ -47,6 +48,20 @@ const authSlice = createGenericSlice({
                 error: null,
             };
         },
+        setCurrentUser: (state, action: PayloadAction<IUser>) => {
+            if (state.login.data) {
+                state.login.data = action.payload;
+                return;
+            }
+
+            if (state.register.data) {
+                state.register.data = action.payload;
+                return;
+            }
+
+            state.login.data = action.payload;
+            state.login.status = "succeeded";
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -89,5 +104,5 @@ const authSlice = createGenericSlice({
     },
 });
 
-export const { resetAuthState } = authSlice.actions;
+export const { resetAuthState, setCurrentUser } = authSlice.actions;
 export const authReducer = authSlice.reducer;

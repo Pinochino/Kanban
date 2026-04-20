@@ -11,15 +11,16 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { apiName } from "@/api/apiName";
 import { useGetAllData } from "@/hooks/useGetAllData";
+import { useI18n } from "@/i18n/I18nProvider";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { AxiosError } from "axios";
 
-const getRoleLabel = (role: string) => {
+const getRoleLabel = (role: string, t: (key: string) => string) => {
   switch (role) {
     case "SUPER_ADMIN":
-      return "Admin";
+      return t("auth.roleAdmin");
     case "USER":
-      return "Staff";
+      return t("auth.roleStaff");
     default:
       return role;
   }
@@ -40,6 +41,7 @@ const getInitials = (name: string | null | undefined) => {
 
 export default function SoftDeletedUsers() {
   const queryClient = useQueryClient();
+  const { t } = useI18n();
 
   const getApiErrorMessage = (error: unknown, fallback: string) => {
     if (error instanceof AxiosError) {
@@ -71,9 +73,9 @@ export default function SoftDeletedUsers() {
       queryClient.invalidateQueries({ queryKey: [`${apiName.accounts.listSoftDelete}`] });
       queryClient.invalidateQueries({ queryKey: [`${apiName.accounts.list}`] });
       // queryClient.invalidateQueries({ queryKey: ["userActiveNum"] });
-      toast.success("Đã restore người dùng.");
+      toast.success(t("auth.updateSuccess"));
     },
-    onError: (error) => toast.error(getApiErrorMessage(error, "Restore người dùng thất bại.")),
+    onError: (error) => toast.error(getApiErrorMessage(error, t("auth.deleteForeverDescription"))),
   });
 
   const deleteUserPermanent = useMutation({
@@ -89,9 +91,9 @@ export default function SoftDeletedUsers() {
       queryClient.invalidateQueries({ queryKey: [`${apiName.accounts.listSoftDelete}`] });
       queryClient.invalidateQueries({ queryKey: [`${apiName.accounts.list}`] });
       // queryClient.invalidateQueries({ queryKey: ["userActiveNum"] });
-      toast.success("Đã xóa vĩnh viễn người dùng.");
+      toast.success(t("auth.deleteForever"));
     },
-    onError: (error) => toast.error(getApiErrorMessage(error, "Xóa vĩnh viễn người dùng thất bại.")),
+    onError: (error) => toast.error(getApiErrorMessage(error, t("auth.deleteForeverDescription"))),
   });
 
 
@@ -100,20 +102,20 @@ export default function SoftDeletedUsers() {
       <Card className="border-0 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 text-white shadow-xl">
         <CardContent className="flex flex-col gap-4 p-6 md:flex-row md:items-end md:justify-between">
           <div className="space-y-2">
-            <h1 className="text-2xl font-semibold md:text-3xl">Soft Deleted Users</h1>
+            <h1 className="text-2xl font-semibold md:text-3xl">{t("auth.softDelete")}</h1>
             <p className="max-w-2xl text-sm text-slate-200">
-              Danh sách tài khoản đã xóa mềm. Bạn có thể restore tài khoản bất kỳ về danh sách người dùng chính.
+              {t("auth.deleteConfirmDescription")}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <Button asChild variant="secondary" className="bg-white text-slate-900 hover:bg-slate-100">
               <Link to="/users">
                 <ArrowLeft className="mr-1 h-4 w-4" />
-                Quay lại quản lý user
+                {t("sidebar.users")}
               </Link>
             </Button>
             <Badge variant="outline" className="border-slate-500 bg-slate-800/60 px-3 py-1 text-slate-100">
-              {Array.isArray(users) ? users.length : 0} user
+              {Array.isArray(users) ? users.length : 0} {t("auth.pageUsers")}
             </Badge>
           </div>
         </CardContent>
@@ -121,32 +123,32 @@ export default function SoftDeletedUsers() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Kho lưu xóa mềm</CardTitle>
-          <CardDescription>Nhấn restore để mở lại tài khoản và đưa về trang quản trị user.</CardDescription>
+          <CardTitle>{t("auth.softDelete")}</CardTitle>
+          <CardDescription>{t("auth.detailDescription")}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="hidden overflow-x-auto rounded-lg border md:block">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Vai trò</TableHead>
-                  <TableHead>Ngày tạo</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{t("auth.usernameColumn")}</TableHead>
+                  <TableHead>{t("auth.detailEmail")}</TableHead>
+                  <TableHead>{t("auth.roleColumn")}</TableHead>
+                  <TableHead>{t("auth.createdAt")}</TableHead>
+                  <TableHead className="text-right">{t("auth.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
                     <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
-                      Đang tải danh sách user đã xóa mềm...
+                      {t("auth.loadingPage")}
                     </TableCell>
                   </TableRow>
                 ) : !Array.isArray(users) || users.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
-                      Chưa có user nào trong kho xóa mềm.
+                      {t("auth.noData")}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -158,7 +160,7 @@ export default function SoftDeletedUsers() {
                             <AvatarFallback>{getInitials(user.username)}</AvatarFallback>
                           </Avatar>
                           <div className="space-y-0.5">
-                            <p className="font-medium">{user.username || "Chưa cập nhật tên"}</p>
+                            <p className="font-medium">{user.username || t("auth.noRole")}</p>
                             <p className="text-xs text-muted-foreground">ID: {user.id}</p>
                           </div>
                         </div>
@@ -168,13 +170,13 @@ export default function SoftDeletedUsers() {
                         <div className="flex flex-wrap items-center gap-1.5">
                           {user.roles.map((r: IRole) => (
                             <Badge key={r.id} variant="secondary">
-                              {getRoleLabel(r.name)}
+                              {getRoleLabel(r.name, t)}
                             </Badge>
                           ))}
                         </div>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {new Date(user.createdAt).toLocaleDateString("vi-VN")}
+                        {new Date(user.createdAt).toLocaleDateString()}
                       </TableCell>
                       <TableCell className="text-right space-x-2">
                         <Button
@@ -209,7 +211,7 @@ export default function SoftDeletedUsers() {
                                 disabled={deleteUserPermanent.isPending}
                                 className="bg-red-500 text-white hover:bg-red-600"
                               >
-                                {deleteUserPermanent.isPending ? "Đang xóa..." : "Xóa vĩnh viễn"}
+                                {deleteUserPermanent.isPending ? t("auth.deleteForever") : t("auth.deleteForever")}
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
@@ -226,11 +228,11 @@ export default function SoftDeletedUsers() {
           <div className="space-y-3 md:hidden">
             {isLoading ? (
               <div className="rounded-lg border p-5 text-center text-sm text-muted-foreground">
-                Đang tải danh sách user đã xóa mềm...
+                {t("auth.loadingPage")}
               </div>
             ) : !Array.isArray(users) || users.length === 0 ? (
               <div className="rounded-lg border p-5 text-center text-sm text-muted-foreground">
-                Chưa có user nào trong kho xóa mềm.
+                {t("auth.noData")}
               </div>
             ) : (
               users.map((user) => (
@@ -240,7 +242,7 @@ export default function SoftDeletedUsers() {
                       <AvatarFallback>{getInitials(user.username)}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="font-medium">{user.username || "Chưa cập nhật tên"}</p>
+                      <p className="font-medium">{user.username || t("auth.noRole")}</p>
                       <p className="text-xs text-muted-foreground">ID: {user.id}</p>
                     </div>
                   </div>
@@ -250,14 +252,14 @@ export default function SoftDeletedUsers() {
                   <div className="flex flex-wrap items-center gap-1.5">
                     {user.roles.map((r: IRole) => (
                       <Badge key={r.id} variant="secondary">
-                        {getRoleLabel(r.name)}
+                        {getRoleLabel(r.name, t)}
                       </Badge>
                     ))}
                   </div>
 
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-xs text-muted-foreground">
-                      {new Date(user.createdAt).toLocaleDateString("vi-VN")}
+                      {new Date(user.createdAt).toLocaleDateString()}
                     </p>
                     <Button
                       onClick={() => restoreUser.mutate(user.id || "")}
@@ -265,7 +267,7 @@ export default function SoftDeletedUsers() {
                       className="bg-emerald-600 hover:bg-emerald-700"
                     >
                       <RotateCcw className="mr-1 h-4 w-4" />
-                      Restore
+                      {t("auth.restore")}
                     </Button>
 
                   </div>
@@ -280,7 +282,7 @@ export default function SoftDeletedUsers() {
               onClick={() => queryClient.invalidateQueries({ queryKey: [`${apiName.accounts.listSoftDelete}`] })}
             >
               <RefreshCw className="mr-1 h-4 w-4" />
-              Tải lại
+              {t("auth.reload")}
             </Button>
           </div>
         </CardContent>

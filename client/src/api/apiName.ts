@@ -35,6 +35,7 @@ export const apiName = {
         create: "/tasks/create",
         update: "/tasks/update",
         updateStatus: "/tasks/update-status",
+        delete: "/tasks/delete",
     },
 
     dashboard: {
@@ -71,6 +72,16 @@ export const apiName = {
     taskLabels: {
         list: "/task-labels/list",
         toggle: "/task-labels/toggle",
+    },
+
+    taskActivities: {
+        list: "/task-activities/list",
+    },
+
+    taskAttachments: {
+        list: "/task-attachments/list",
+        upload: "/task-attachments/upload",
+        delete: "/task-attachments/delete",
     },
 
     roles: {
