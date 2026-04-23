@@ -13,6 +13,8 @@ public interface TaskAttachmentService {
     @Transactional
     TaskAttachmentResponse uploadAttachment(Long taskId, MultipartFile file);
 
+    TaskAttachmentDownloadData getAttachmentForDownload(Long attachmentId);
+
     @Transactional
     void deleteAttachment(Long attachmentId);
 

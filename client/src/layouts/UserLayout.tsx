@@ -21,7 +21,7 @@ export default function UserLayout({ children }: UserLayoutProps) {
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
         <UserSidebar />
-        <div className="flex flex-1 flex-col bg-gradient-to-b from-background via-background to-muted/20">
+        <div className="flex min-w-0 flex-1 flex-col bg-gradient-to-b from-background via-background to-muted/20">
           <header className="sticky top-0 z-20 border-b border-border/70 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70">
             <div className="flex h-16 items-center justify-between gap-4 px-4 lg:px-6">
               <div className="flex items-center gap-3">
@@ -49,7 +49,7 @@ export default function UserLayout({ children }: UserLayoutProps) {
               </div>
             </div>
           </header>
-          <main className="flex-1 overflow-auto p-4 lg:p-6">
+          <main className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-6">
             {isTransitionLoading ? <RoutePageSkeleton compact /> : children ?? <Outlet />}
           </main>
         </div>

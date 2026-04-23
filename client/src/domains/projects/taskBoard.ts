@@ -4,6 +4,11 @@ export type TaskStatus = "backlog" | "todo" | "in_progress" | "review" | "done";
 export type TaskPriority = "low" | "medium" | "high" | "critical";
 export type ProjectStatus = "planning" | "on_track" | "at_risk" | "completed";
 
+export type TaskTag = {
+  title: string;
+  color?: string;
+};
+
 export type Task = {
   id: string;
   projectId: string | number;
@@ -22,7 +27,7 @@ export type Task = {
   checklistTotal: number;
   comments: number;
   attachments: number;
-  tags: string[];
+  tags: TaskTag[];
 };
 
 export type NewTaskForm = {

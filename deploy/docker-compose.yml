@@ -1,30 +1,28 @@
-version: "3.9"
-
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:${POSTGRES_VERSION:-16-alpine}
     container_name: kanban-db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: kanban
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: ${POSTGRES_DB:-kanban}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-123456}
     ports:
-      - "5433:5432"
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d kanban"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-kanban}"]
       interval: 10s
       timeout: 5s
       retries: 10
 
   redis:
-    image: redis:7-alpine
+    image: redis:${REDIS_VERSION:-7-alpine}
     container_name: kanban-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     command: ["redis-server", "--appendonly", "yes"]
@@ -46,17 +44,22 @@ services:
       redis:
         condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/kanban
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: 123456
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-kanban}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-123456}
       SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: 6379
-      SERVER_PORT: 9000
-      SERVER_SERVLET_CONTEXT_PATH: /api
-      JWT_ACCESS_KEY: MYKo/rTjkoG1x3vxBsidNu03Fdw5XlHLuCGCnyX58GMtntqvmpplHpQnjclg2wUTGLoWV09alfJKudLT/WUrag==
-      JWT_ACCESS_EXPIRE: 40
+      SPRING_DATA_REDIS_PORT: ${REDIS_PORT:-6379}
+      SERVER_PORT: ${SERVER_PORT:-9000}
+      SERVER_SERVLET_CONTEXT_PATH: ${SERVER_SERVLET_CONTEXT_PATH:-/api}
+      JWT_ACCESS_KEY: ${JWT_ACCESS_KEY:-MYKo/rTjkoG1x3vxBsidNu03Fdw5XlHLuCGCnyX58GMtntqvmpplHpQnjclg2wUTGLoWV09alfJKudLT/WUrag==}
+      JWT_ACCESS_EXPIRE: ${JWT_ACCESS_EXPIRE:-40}
+      MAIL_USERNAME: ${MAIL_USERNAME:-noreply@example.com}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-not-configured}
+      CLOUD_NAME: ${CLOUD_NAME:-not-configured}
+      CLOUD_API_KEY: ${CLOUD_API_KEY:-not-configured}
+      CLOUD_API_SECRET: ${CLOUD_API_SECRET:-not-configured}
     ports:
-      - "9000:9000"
+      - "${SERVER_PORT:-9000}:${SERVER_PORT:-9000}"
 
   client:
     build:
@@ -67,7 +70,7 @@ services:
     depends_on:
       - server
     ports:
-      - "4000:80"
+      - "${CLIENT_PORT:-4000}:80"
 
 volumes:
   postgres_data:

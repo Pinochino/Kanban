@@ -20,6 +20,7 @@ import { useAppDispatch } from "@/store/hooks";
 import authService from "@/services/AuthService";
 import { toast } from "../ui/sonner";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useUnreadIndicators } from "@/hooks/useUnreadIndicators";
 import { useI18n } from "@/i18n/I18nProvider";
 
 export function AdminSidebar() {
@@ -28,13 +29,14 @@ export function AdminSidebar() {
   const location = useLocation();
   const { user } = useCurrentUser();
   const { t } = useI18n();
+  const { unreadMessages } = useUnreadIndicators();
 
   const menuItems = [
     { title: t("sidebar.dashboard"), url: "/", icon: LayoutDashboard },
     { title: t("sidebar.accounts"), url: "/users", icon: Users },
     { title: t("sidebar.projects"), url: "/projects", icon: Kanban },
     { title: t("sidebar.notifications"), url: "/admin/notifications", icon: Bell },
-    { title: t("sidebar.chat"), url: "/chat", icon: MessagesSquare },
+    { title: t("sidebar.chat"), url: "/chat", icon: MessagesSquare, badgeCount: unreadMessages },
   ];
 
   const dispatch = useAppDispatch();
@@ -94,8 +96,18 @@ export function AdminSidebar() {
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={isActive(item.url)}>
                     <NavLink to={item.url} end={item.url === "/admin"} className="hover:bg-sidebar-accent/50" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
-                      <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
+                      <div className="relative">
+                        <item.icon className="h-4 w-4" />
+                        {collapsed && Number(item.badgeCount ?? 0) > 0 ? (
+                          <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse" />
+                        ) : null}
+                      </div>
+                      {!collapsed && <span className="flex-1">{item.title}</span>}
+                      {!collapsed && Number(item.badgeCount ?? 0) > 0 ? (
+                        <span className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-semibold text-white animate-pulse">
+                          {Number(item.badgeCount) > 99 ? "99+" : Number(item.badgeCount)}
+                        </span>
+                      ) : null}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

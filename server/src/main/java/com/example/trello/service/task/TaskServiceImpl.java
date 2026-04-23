@@ -11,9 +11,11 @@ import com.example.trello.exception.AppError;
 import com.example.trello.mapper.TaskMapper;
 import com.example.trello.model.Account;
 import com.example.trello.model.ListTask;
+import com.example.trello.model.Notification;
 import com.example.trello.model.Task;
 import com.example.trello.repository.AccountRepository;
 import com.example.trello.repository.ListTaskRepository;
+import com.example.trello.repository.NotificationRepository;
 import com.example.trello.repository.TaskRepository;
 import com.example.trello.service.notification.NotificationService;
 import com.example.trello.service.taskattachment.TaskAttachmentService;
@@ -47,6 +49,7 @@ public class TaskServiceImpl implements TaskService {
     TaskRepository taskRepository;
     AccountRepository accountRepository;
     ListTaskRepository listTaskRepository;
+        NotificationRepository notificationRepository;
     JwtUtil jwtUtil;
     TaskMapper taskMapper;
         NotificationService notificationService;
@@ -174,6 +177,7 @@ public class TaskServiceImpl implements TaskService {
 
         account.getTasks().remove(task);
         listTask.getTaskList().remove(task);
+        clearNotificationsByTaskId(taskId);
         taskAttachmentService.deleteByTaskId(taskId);
         taskActivityService.deleteByTaskId(taskId);
         taskRepository.delete(task);
@@ -193,8 +197,18 @@ public class TaskServiceImpl implements TaskService {
                 .findById(listTaskId)
                 .orElseThrow(() -> new AppError(ErrorCode.LIST_TASK_NOT_FOUND));
 
+        List<Long> taskIds = listTask.getTaskList().stream()
+                .map(Task::getId)
+                .filter(Objects::nonNull)
+                .toList();
+
         account.getTasks().clear();
         listTask.getTaskList().clear();
+
+        for (Long taskId : taskIds) {
+            clearNotificationsByTaskId(taskId);
+        }
+
         taskAttachmentService.deleteAll();
         taskActivityService.deleteAll();
         taskRepository.deleteAll();
@@ -309,6 +323,18 @@ public class TaskServiceImpl implements TaskService {
                 if (reminderDate != null && dueDate != null && reminderDate.isAfter(dueDate)) {
                         throw new AppError(ErrorCode.TASK_REMINDER_AFTER_DUE_INVALID);
                 }
+        }
+
+        private void clearNotificationsByTaskId(Long taskId) {
+                List<Notification> notifications = notificationRepository.findByTaskId(taskId);
+                if (notifications.isEmpty()) {
+                        return;
+                }
+
+                for (Notification notification : notifications) {
+                        notification.setTask(null);
+                }
+                notificationRepository.saveAll(notifications);
         }
 
 

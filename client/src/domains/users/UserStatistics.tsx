@@ -19,8 +19,10 @@ import {
 import { IUser } from "@/types/UserInterface";
 import { useGetAllData } from "@/hooks/useGetAllData";
 import { apiName } from "@/api/apiName";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const UserStatistics = ({ userList }: { userList: IUser[] }) => {
+  const { t } = useI18n();
 
   const { data: totalUserNum } = useGetAllData({ url: `${apiName.accounts.count}` })
   const { data: userLoginNum } = useGetAllData({ url: `${apiName.accounts.loginNums}?login=true` })
@@ -36,14 +38,13 @@ const UserStatistics = ({ userList }: { userList: IUser[] }) => {
           <div className="space-y-2">
             <p className="inline-flex items-center gap-2 text-sm text-slate-200">
               <ShieldCheck className="h-4 w-4" />
-              Admin control panel
+              {t("auth.adminControlPanel")}
             </p>
             <h1 className="text-2xl font-semibold md:text-3xl">
-              User Management
+              {t("auth.userManagementHeading")}
             </h1>
             <p className="max-w-2xl text-sm text-slate-200">
-              Quản trị tài khoản, phân quyền, trạng thái khóa/mở khóa và theo
-              dõi truy cập trên toàn hệ thống.
+              {t("auth.userManagementSummary")}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -54,14 +55,14 @@ const UserStatistics = ({ userList }: { userList: IUser[] }) => {
             >
               <Link to="/users/deleted">
                 <ArchiveRestore className="mr-1 h-4 w-4" />
-                Accounts đã xóa mềm
+                {t("auth.softDeletedAccounts")}
               </Link>
             </Button>
             <Badge
               variant="outline"
               className="w-fit border-slate-500 bg-slate-800/60 px-3 py-1 text-slate-100"
             >
-               {Array.isArray(userList) && Array.from(userList).length} kết quả hiển thị
+               {Array.isArray(userList) && Array.from(userList).length} {t("auth.resultsShown")}
             </Badge>
           </div>
         </CardContent>
@@ -70,7 +71,7 @@ const UserStatistics = ({ userList }: { userList: IUser[] }) => {
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Tổng người dùng</CardDescription>
+            <CardDescription>{t("dashboard.users")}</CardDescription>
             <CardTitle className="text-2xl">
               {totalUserNum ?? 0}
             </CardTitle>
@@ -78,46 +79,46 @@ const UserStatistics = ({ userList }: { userList: IUser[] }) => {
           <CardContent>
             <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
               <Users className="h-4 w-4" />
-              All accounts
+              {t("auth.allAccounts")}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Đang hoạt động</CardDescription>
+            <CardDescription>{t("auth.active")}</CardDescription>
             <CardTitle className="text-2xl"> {userLoginNum}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
               <UserCheck className="h-4 w-4" />
-              Active users
+              {t("auth.activeUsers")}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Tài khoản bị khóa</CardDescription>
+            <CardDescription>{t("auth.lockedAccounts")}</CardDescription>
             <CardTitle className="text-2xl"> {userActiveNum}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
               <UserX className="h-4 w-4" />
-              Locked accounts
+              {t("auth.lockedAccounts")}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Quyền admin</CardDescription>
+            <CardDescription>{t("auth.elevatedRoles")}</CardDescription>
             <CardTitle className="text-2xl"> {userAdminNum}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
               <ShieldAlert className="h-4 w-4" />
-              Elevated roles
+              {t("auth.elevatedRoles")}
             </p>
           </CardContent>
         </Card>

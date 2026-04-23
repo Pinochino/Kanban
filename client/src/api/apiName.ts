@@ -45,9 +45,9 @@ export const apiName = {
     notifications: {
         adminCreate: "/notifications/admin/create",
         adminList: "/notifications/admin/list",
+        adminDelete: "/notifications/admin",
         myList: "/notifications/my/list",
         markRead: "/notifications",
-        retry: "/notifications/admin/retry",
     },
 
     chats: {
@@ -82,6 +82,7 @@ export const apiName = {
         list: "/task-attachments/list",
         upload: "/task-attachments/upload",
         delete: "/task-attachments/delete",
+        download: "/task-attachments/download",
     },
 
     roles: {

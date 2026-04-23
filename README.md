@@ -125,6 +125,19 @@ Frontend mac dinh:
 Compose file dat tai:
 - deploy/docker-compose.yml
 
+Buoc 1: tao file env cho deploy:
+
+```powershell
+cd deploy
+Copy-Item .env.example .env
+```
+
+Buoc 2: mo file `deploy/.env` va cap nhat it nhat:
+- POSTGRES_PASSWORD
+- JWT_ACCESS_KEY
+
+Buoc 3: chay he thong:
+
 Tu thu muc deploy:
 
 ```powershell
@@ -148,6 +161,13 @@ Port mapping:
 - Server API: http://localhost:9000/api
 - PostgreSQL: localhost:5433
 - Redis: localhost:6379
+
+Kiem tra nhanh sau khi chay:
+
+```powershell
+docker compose ps
+docker compose logs -f server
+```
 
 ## Bien moi truong va cau hinh quan trong
 

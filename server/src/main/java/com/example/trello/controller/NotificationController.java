@@ -59,9 +59,9 @@ public class NotificationController {
         return ResponseEntity.ok(new AppResponse<>(200, "Mark notification as read success"));
     }
 
-    @PatchMapping("/admin/retry/{notificationId}")
-    public ResponseEntity<AppResponse<Void>> retryNotification(@PathVariable Long notificationId) {
-        notificationService.retryNotification(notificationId);
-        return ResponseEntity.ok(new AppResponse<>(200, "Retry notification success"));
+    @DeleteMapping("/admin/{notificationId}")
+    public ResponseEntity<AppResponse<Void>> deleteNotification(@PathVariable Long notificationId) {
+        notificationService.deleteNotification(notificationId);
+        return ResponseEntity.ok(new AppResponse<>(200, "Delete notification success"));
     }
 }

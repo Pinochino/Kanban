@@ -15,4 +15,6 @@ public class LabelRequest {
     String color;
     
     Long projectId;
+
+    Long taskId;
 }

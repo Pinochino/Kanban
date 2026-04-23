@@ -12,6 +12,7 @@ import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import ProjectList from "@/domains/projects/ProjectList";
 import { useGetAllData } from "@/hooks/useGetAllData";
 import { ICreateProject, IProject } from "@/types/ProjectInterface";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const defaultCreateProjectForm: ICreateProject = {
   title: "",
@@ -22,6 +23,7 @@ const defaultCreateProjectForm: ICreateProject = {
 
 const ProjectManagement = () => {
   const queryClient = useQueryClient();
+  const { t } = useI18n();
 
   const [isCreateProjectDialogOpen, setIsCreateProjectDialogOpen] = useState(false);
   const [projectInput, setProjectInput] = useState<ICreateProject>(defaultCreateProjectForm);
@@ -113,10 +115,10 @@ const ProjectManagement = () => {
 
       await queryClient.invalidateQueries({ queryKey: [apiName.projects.list] });
       await refetchProjectList();
-      toast.success("Create project successfully");
+      toast.success(t("projectMgmt.createSuccess"));
     },
     onError: () => {
-      toast.error("Create project failed");
+      toast.error(t("projectMgmt.createFailed"));
     },
   });
 
@@ -127,11 +129,11 @@ const ProjectManagement = () => {
           <div className="space-y-2">
             <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
               <Sparkles className="h-4 w-4" />
-              Project control center
+              {t("projectMgmt.controlCenter")}
             </p>
-            <h1 className="text-2xl font-semibold md:text-3xl">Project Management</h1>
+            <h1 className="text-2xl font-semibold md:text-3xl">{t("projectMgmt.title")}</h1>
             <p className="max-w-2xl text-sm text-muted-foreground">
-              Trang này chỉ quản lý project. Nhấn vào từng project để mở trang task riêng theo project đó.
+              {t("projectMgmt.description")}
             </p>
           </div>
 
@@ -139,7 +141,7 @@ const ProjectManagement = () => {
             <DialogTrigger asChild>
                 <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
                 <Plus className="h-4 w-4" />
-                Create project
+                {t("projectMgmt.createProject")}
               </Button>
             </DialogTrigger>
           </Dialog>
@@ -149,25 +151,25 @@ const ProjectManagement = () => {
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Projects</p>
+            <p className="text-xs text-muted-foreground">{t("projectMgmt.projects")}</p>
             <p className="text-2xl font-semibold">{projectStats.totalProjects}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Total tasks</p>
+            <p className="text-xs text-muted-foreground">{t("projectMgmt.totalTasks")}</p>
             <p className="text-2xl font-semibold">{projectStats.totalTasks}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Completed tasks</p>
+            <p className="text-xs text-muted-foreground">{t("projectMgmt.completedTasks")}</p>
             <p className="text-2xl font-semibold">{projectStats.doneTasks}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Overall progress</p>
+            <p className="text-xs text-muted-foreground">{t("projectMgmt.overallProgress")}</p>
             <p className="text-2xl font-semibold">{projectStats.completionRate}%</p>
             <div className="mt-2 h-2 rounded-full bg-muted">
               <div
@@ -181,12 +183,12 @@ const ProjectManagement = () => {
 
       {isProjectListLoading ? (
         <Card>
-          <CardContent className="p-6 text-sm text-muted-foreground">Đang tải danh sách project...</CardContent>
+          <CardContent className="p-6 text-sm text-muted-foreground">{t("projectMgmt.loadingProjects")}</CardContent>
         </Card>
       ) : isProjectListError ? (
         <Card>
           <CardContent className="p-6 text-sm text-red-600">
-            Không thể tải danh sách project. Vui lòng tải lại trang.
+            {t("projectMgmt.loadProjectsFailed")}
           </CardContent>
         </Card>
       ) : (

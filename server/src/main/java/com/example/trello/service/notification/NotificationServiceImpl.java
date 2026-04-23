@@ -209,35 +209,13 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public void retryNotification(Long notificationId) {
+    public void deleteNotification(Long notificationId) {
         assertAdmin();
 
         Notification notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new AppError(ErrorCode.NOTIFICATION_NOT_FOUND));
 
-        if (notification.getChannel() != NotificationChannel.EMAIL) {
-            throw new AppError(ErrorCode.NOTIFICATION_INVALID_CHANNEL);
-        }
-
-        try {
-            notification.setStatus(NotificationStatus.PENDING);
-            notification.setRetryCount(notification.getRetryCount() + 1);
-            notificationRepository.save(notification);
-
-            mailService.sendSimpleMessage(
-                    notification.getRecipientAccount().getEmail(),
-                    "Task assignment reminder",
-                    notification.getRecipientAccount().getUsername(),
-                    notification.getMessage()
-            );
-
-            notification.setStatus(NotificationStatus.SENT);
-            notification.setDeliveredAt(LocalDateTime.now());
-            notificationRepository.save(notification);
-        } catch (Exception exception) {
-            notification.setStatus(NotificationStatus.FAILED);
-            notificationRepository.save(notification);
-        }
+        notificationRepository.delete(notification);
     }
 
     private NotificationResponse toResponse(Notification notification) {

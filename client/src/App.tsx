@@ -18,6 +18,7 @@ const SoftDeletedUsers = lazy(() => import("./pages/admin/SoftDeletedUsers"));
 const NotificationControl = lazy(() => import("./pages/admin/NotificationControl"));
 const ProjectManagement = lazy(() => import("./pages/admin/ProjectManagement"));
 const MyTasks = lazy(() => import("./pages/MyTasks"));
+const MyProjectTasks = lazy(() => import("./pages/MyProjectTasks"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const UserLayout = lazy(() => import("./layouts/UserLayout"));
 const TaskManagement = lazy(() => import("./pages/admin/TaskManagement"));
@@ -78,6 +79,17 @@ const App = () => (
                                                         <ProtectedRoute>
                                                             <UserLayout>
                                                                 <MyTasks />
+                                                            </UserLayout>
+                                                        </ProtectedRoute>
+                                                    }
+                                                />
+
+                                                <Route
+                                                    path="/my-tasks/:projectId/tasks"
+                                                    element={
+                                                        <ProtectedRoute>
+                                                            <UserLayout>
+                                                                <MyProjectTasks />
                                                             </UserLayout>
                                                         </ProtectedRoute>
                                                     }
