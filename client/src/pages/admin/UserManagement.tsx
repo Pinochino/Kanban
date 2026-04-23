@@ -62,12 +62,14 @@ import useDebounce from "@/hooks/useDebounce";
 import { useEnterSkeletonLoading, useMinVisibleLoading } from "@/hooks/useMinimumLoading";
 import { buildQuery } from "@/utils/QueryUtils";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const USER_PAGE_SIZE_OPTIONS = [5, 10, 15, 20] as const;
 
 export default function UserManagement() {
   const queryClient = useQueryClient();
   const { user: currentUser } = useCurrentUser();
+  const { t, language } = useI18n();
 
   const [search, setSearch] = useState("");
   const [detailUserId, setDetailUserId] = useState<string | null>(null);
@@ -187,7 +189,7 @@ export default function UserManagement() {
       queryClient.invalidateQueries({
         queryKey: [`${apiName.accounts.activeNums}?active=false`],
       });
-      toast.success("Cập nhật thành công!");
+      toast.success(t("auth.updateSuccess"));
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -206,7 +208,7 @@ export default function UserManagement() {
       queryClient.invalidateQueries({
         queryKey: [`${apiName.accounts.activeNums}`],
       });
-      toast.success("Đã chuyển user sang trạng thái xóa mềm.");
+      toast.success(t("auth.softDeleteSuccess"));
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -245,7 +247,7 @@ export default function UserManagement() {
       setEditingUser(null);
       setSelectedAvatarFile(null);
       setAvatarPreview(null);
-      toast.success("Cập nhật thông tin người dùng thành công.");
+      toast.success(t("auth.updateUserSuccess"));
     },
     onError: (err: Error) => {
       toast.error(err.message);
@@ -255,7 +257,7 @@ export default function UserManagement() {
   const handleLockUser = async (userId: number | string, lock: boolean) => {
     const targetUser = users.find((item: IUser) => String(item.id ?? "") === String(userId));
     if (targetUser && !canToggleUserActive(targetUser)) {
-      toast.error("Bạn không có quyền đổi trạng thái active của tài khoản này.");
+      toast.error(t("auth.toggleActiveDenied"));
       return;
     }
 
@@ -327,13 +329,13 @@ export default function UserManagement() {
     }
 
     if (!file.type.startsWith("image/")) {
-      toast.error("Vui lòng chọn file ảnh hợp lệ.");
+      toast.error(t("auth.invalidImage"));
       return;
     }
 
     const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) {
-      toast.error("Ảnh quá lớn. Vui lòng chọn ảnh nhỏ hơn 5MB.");
+      toast.error(t("auth.avatarTooLarge"));
       return;
     }
 
@@ -381,12 +383,14 @@ export default function UserManagement() {
 
   const getRoleLabel = (role: string) => {
     switch (role) {
+      case "ADMIN":
       case "SUPER_ADMIN":
-        return "Admin";
+        return t("auth.roleAdmin");
       case "USER":
-        return "Staff";
+        return t("auth.roleStaff");
+      case "GUEST":
       case "guest":
-        return "Guest";
+        return t("auth.roleGuest");
       default:
         return role;
     }
@@ -412,18 +416,15 @@ export default function UserManagement() {
 
       <Card>
         <CardHeader className="space-y-3">
-          <CardTitle>Danh sách người dùng</CardTitle>
-          <CardDescription>
-            Tìm kiếm theo tên/ID, lọc theo vai trò và trạng thái để thao tác
-            quản trị nhanh hơn.
-          </CardDescription>
+          <CardTitle>{t("auth.userListTitle")}</CardTitle>
+          <CardDescription>{t("auth.userListDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-3 lg:grid-cols-[1fr_180px_180px]">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Tìm kiếm theo tên hoặc ID"
+                placeholder={t("auth.searchUsers")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-10 pr-9"
@@ -438,10 +439,10 @@ export default function UserManagement() {
               onValueChange={(value) => setFilterRole(String(value))}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Lọc vai trò" />
+                <SelectValue placeholder={t("auth.filterRole")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tất cả vai trò</SelectItem>
+                <SelectItem value="all">{t("auth.allRoles")}</SelectItem>
                 {(Array.isArray(roleList) ? Array.from(roleList) : []).map(
                   (r: IRole) => {
                     return (
@@ -461,34 +462,34 @@ export default function UserManagement() {
               }}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Lọc trạng thái" />
+                <SelectValue placeholder={t("auth.filterStatus")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                <SelectItem value="true">Đang hoạt động</SelectItem>
-                <SelectItem value="false">Không hoạt động</SelectItem>
+                <SelectItem value="all">{t("auth.allStatuses")}</SelectItem>
+                <SelectItem value="true">{t("auth.active")}</SelectItem>
+                <SelectItem value="false">{t("auth.inactive")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          <div className="relative hidden overflow-x-auto rounded-lg border md:block">
+          <div className="relative overflow-x-auto rounded-lg border">
             {isPageTransitionLoading ? (
               <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-[1px]">
                 <div className="flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm text-muted-foreground shadow-sm">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Đang tải trang...
+                  {t("auth.loadingPage")}
                 </div>
               </div>
             ) : null}
-            <Table className="table-fixed">
+            <Table className="table-fixed min-w-[860px] [&_th]:px-2 [&_td]:px-2">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[320px]">Username</TableHead>
-                  <TableHead className="w-[220px]">Role</TableHead>
-                  <TableHead className="w-[140px] text-center">Status</TableHead>
-                  <TableHead className="w-[140px]">Created At</TableHead>
-                  <TableHead className="w-[100px] text-center">Active</TableHead>
-                  <TableHead className="w-[150px] text-right">Actions</TableHead>
+                  <TableHead className="w-[240px]">{t("auth.usernameColumn")}</TableHead>
+                  <TableHead className="w-[180px]">{t("auth.roleColumn")}</TableHead>
+                  <TableHead className="w-[110px] text-center">{t("auth.statusColumn")}</TableHead>
+                  <TableHead className="w-[120px]">{t("auth.createdAt")}</TableHead>
+                  <TableHead className="w-[90px] text-center">{t("auth.activeColumn")}</TableHead>
+                  <TableHead className="w-[120px] text-right">{t("auth.actions")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -515,8 +516,8 @@ export default function UserManagement() {
                   <TableRow>
                     <TableCell colSpan={6} className="py-4">
                       <Empty
-                        title="Không có người dùng"
-                        description="Thử đổi bộ lọc hoặc từ khóa tìm kiếm theo tên/ID."
+                        title={t("auth.noUsers")}
+                        description={t("auth.noUsersDescription")}
                         icon={<Search className="h-5 w-5" />}
                       />
                     </TableCell>
@@ -535,7 +536,7 @@ export default function UserManagement() {
                             </Avatar>
                             <div className="space-y-0.5">
                               <p className="font-medium">
-                                {user.username || "Chưa cập nhật tên"}
+                                {user.username || t("auth.detailNoData")}
                               </p>
                               <p className="text-xs text-muted-foreground">
                                 ID: {user.id}
@@ -544,7 +545,7 @@ export default function UserManagement() {
                           </div>
                         </TableCell>
 
-                        <TableCell className="w-[220px] py-3">
+                        <TableCell className="w-[180px] py-3">
                           <div className="flex min-h-8 flex-wrap items-center gap-1.5">
                             {user.roles?.length ? (
                               user.roles.map((r: IRole) => (
@@ -563,7 +564,7 @@ export default function UserManagement() {
                               ))
                             ) : (
                               <Badge variant="outline" className="whitespace-nowrap">
-                                Chưa có vai trò
+                                {t("auth.noRole")}
                               </Badge>
                             )}
                           </div>
@@ -577,20 +578,18 @@ export default function UserManagement() {
                               "border-emerald-200 bg-emerald-50 text-emerald-700",
                             )}
                           >
-                            {!user.login ? "Không hoạt động" : "Hoạt động"}
+                            {!user.login ? t("auth.switchInactive") : t("auth.switchActive")}
                           </Badge>
                         </TableCell>
 
                         <TableCell className="py-3 text-sm text-muted-foreground">
-                          {new Date(user.createdAt).toLocaleDateString("vi-VN")}
+                          {new Date(user.createdAt).toLocaleDateString(language === "vi" ? "vi-VN" : "en-US")}
                         </TableCell>
 
                         <TableCell className="py-3 text-center">
-                          {!canToggleUserActive(user) ? (
+                          {!canToggleUserActive(user) && String(currentUser?.id ?? "") !== String(user.id ?? "") ? (
                             <span className="block text-xs text-muted-foreground">
-                              {String(currentUser?.id ?? "") === String(user.id ?? "")
-                                ? "Tài khoản hiện tại"
-                                : "Không đủ quyền"}
+                              {t("auth.noPermission")}
                             </span>
                           ) : null}
                           <Switch
@@ -635,24 +634,21 @@ export default function UserManagement() {
                               <AlertDialogContent>
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>
-                                    Xác nhận xóa mềm người dùng?
+                                    {t("auth.deleteConfirm")}
                                   </AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    Tài khoản{" "}
-                                    <strong>{user.username || user.id}</strong>{" "}
-                                    sẽ bị ẩn khỏi danh sách chính và có thể khôi
-                                    phục ở trang user đã xóa mềm.
+                                    {t("auth.deleteConfirmDescription").replace("{name}", String(user.username || user.id))}
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
-                                  <AlertDialogCancel>Hủy</AlertDialogCancel>
+                                  <AlertDialogCancel>{t("auth.cancel")}</AlertDialogCancel>
                                   <AlertDialogAction
                                     onClick={() =>
                                       softDeleteUser.mutate(user.id)
                                     }
                                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                   >
-                                    Xóa mềm
+                                    {t("auth.softDelete")}
                                   </AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
@@ -666,10 +662,8 @@ export default function UserManagement() {
                         >
                           <DialogContent>
                             <DialogHeader>
-                              <DialogTitle>Cập nhật người dùng</DialogTitle>
-                              <DialogDescription>
-                                Chỉnh sửa nhanh thông tin tài khoản trong trang quản trị.
-                              </DialogDescription>
+                              <DialogTitle>{t("auth.editUser")}</DialogTitle>
+                              <DialogDescription>{t("auth.editUserDescription")}</DialogDescription>
                             </DialogHeader>
 
                             {editingUser && (
@@ -709,11 +703,11 @@ export default function UserManagement() {
                                 </div>
 
                                 <div className="space-y-2">
-                                  <Label htmlFor="edit-password">Password</Label>
+                                  <Label htmlFor="edit-password">{t("auth.editPassword")}</Label>
                                   <Input
                                     id="edit-password"
                                     type="password"
-                                    placeholder="Enter your password"
+                                    placeholder={t("auth.passwordInputPlaceholder")}
                                     value={editingUser.password}
                                     onChange={(e) =>
                                       setEditingUser((prev) =>
@@ -724,7 +718,7 @@ export default function UserManagement() {
                                 </div>
 
                                 <div className="space-y-2">
-                                  <Label>Ảnh đại diện</Label>
+                                  <Label>{t("auth.avatar")}</Label>
 
                                   <input
                                     ref={avatarInputRef}
@@ -772,20 +766,20 @@ export default function UserManagement() {
                                     <div className="flex items-center gap-3">
                                       <Avatar className="h-14 w-14 border">
                                         <AvatarImage src={avatarPreview || ""} alt="Avatar preview" />
-                                        <AvatarFallback>IMG</AvatarFallback>
+                                        <AvatarFallback>{t("auth.noAvatar")}</AvatarFallback>
                                       </Avatar>
 
                                       <div className="space-y-1">
                                         <p className="flex items-center gap-2 text-sm font-medium">
                                           <ImageUp className="h-4 w-4" />
-                                          Kéo & thả ảnh vào đây
+                                          {t("auth.uploadingAvatar")}
                                         </p>
                                         <p className="text-xs text-muted-foreground">
-                                          Hoặc bấm để chọn ảnh từ máy (JPG, PNG, WEBP - tối đa 5MB)
+                                          {t("auth.chooseAvatar")}
                                         </p>
                                         {selectedAvatarFile ? (
                                           <p className="text-xs text-emerald-600">
-                                            Đã chọn: {selectedAvatarFile.name}
+                                            {t("auth.avatarSelected")}: {selectedAvatarFile.name}
                                           </p>
                                         ) : null}
                                       </div>
@@ -794,7 +788,7 @@ export default function UserManagement() {
                                 </div>
 
                                 <div className="space-y-2">
-                                  <Label htmlFor="edit-role">Vai trò</Label>
+                                  <Label htmlFor="edit-role">{t("auth.role")}</Label>
                                   <Select
                                     value={String(editingUser.roleId ?? "")}
                                     onValueChange={(value) =>
@@ -806,7 +800,7 @@ export default function UserManagement() {
                                     }
                                   >
                                     <SelectTrigger id="edit-role">
-                                      <SelectValue placeholder="Chọn vai trò" />
+                                      <SelectValue placeholder={t("auth.chooseRole")} />
                                     </SelectTrigger>
                                     <SelectContent>
                                       {/* <SelectItem value="SUPER_ADMIN">Admin</SelectItem>
@@ -832,7 +826,7 @@ export default function UserManagement() {
                                   setAvatarPreview(null);
                                 }}
                               >
-                                Hủy
+                                {t("auth.cancel")}
                               </Button>
                               <Button
                                 onClick={() => {
@@ -857,7 +851,7 @@ export default function UserManagement() {
                                 }}
                                 disabled={updateUser.isPending}
                               >
-                                {updateUser.isPending ? "Đang lưu..." : "Lưu thay đổi"}
+                                {updateUser.isPending ? t("auth.saving") : t("auth.saveChanges")}
                               </Button>
                             </DialogFooter>
                           </DialogContent>
@@ -871,7 +865,7 @@ export default function UserManagement() {
             </Table>
           </div>
 
-          <div className="space-y-3 md:hidden">
+          <div className="hidden">
             {isFirstPageLoading ? (
               <div className="space-y-3 rounded-lg border p-4">
                 {Array.from({ length: Math.min(pageSize, 4) }).map((_, index) => (
@@ -884,8 +878,8 @@ export default function UserManagement() {
               </div>
             ) : users.length === 0 ? (
               <Empty
-                title="Không có người dùng"
-                description="Thử đổi bộ lọc hoặc từ khóa tìm kiếm theo tên/ID."
+                title={t("auth.noUsers")}
+                description={t("auth.noUsersDescription")}
                 icon={<Search className="h-5 w-5" />}
               />
             ) : (
@@ -901,7 +895,7 @@ export default function UserManagement() {
                       </Avatar>
                       <div>
                         <p className="font-medium">
-                          {user.username || "Chưa cập nhật tên"}
+                          {user.username || t("auth.detailNoData")}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           ID: {user.id}
@@ -938,13 +932,13 @@ export default function UserManagement() {
                         "border-emerald-200 bg-emerald-50 text-emerald-700",
                       )}
                     >
-                      {!user.login ? "Không hoạt động" : "Hoạt động"}
+                      {!user.login ? t("auth.switchInactive") : t("auth.switchActive")}
                     </Badge>
                   </div>
 
                   <p className="text-xs text-muted-foreground">
-                    Tạo ngày:{" "}
-                    {new Date(user.createdAt).toLocaleDateString("vi-VN")}
+                    {t("auth.createdAt")}: {" "}
+                    {new Date(user.createdAt).toLocaleDateString(language === "vi" ? "vi-VN" : "en-US")}
                   </p>
 
                   <div className="grid grid-cols-3 gap-2">
@@ -979,22 +973,19 @@ export default function UserManagement() {
                       <AlertDialogContent>
                         <AlertDialogHeader>
                           <AlertDialogTitle>
-                            Xác nhận xóa mềm người dùng?
+                            {t("auth.deleteConfirm")}
                           </AlertDialogTitle>
                           <AlertDialogDescription>
-                            Tài khoản{" "}
-                            <strong>{user.username || user.id}</strong> sẽ bị ẩn
-                            khỏi danh sách chính và có thể khôi phục ở trang
-                            user đã xóa mềm.
+                            {t("auth.deleteConfirmDescription").replace("{name}", String(user.username || user.id))}
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                          <AlertDialogCancel>Hủy</AlertDialogCancel>
+                          <AlertDialogCancel>{t("auth.cancel")}</AlertDialogCancel>
                           <AlertDialogAction
                             onClick={() => softDeleteUser.mutate(user.id)}
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                           >
-                            Xóa mềm
+                            {t("auth.softDelete")}
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
@@ -1006,12 +997,12 @@ export default function UserManagement() {
           </div>
 
           {/* PAGINATION */}
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/70 bg-muted/40 px-3 py-2 text-sm shadow-sm">
-            <span className="text-muted-foreground">
-              Trang {page + 1} - {users.length} user trong trang này
+          <div className="flex flex-col gap-2 rounded-lg border border-border/70 bg-muted/30 px-3 py-2 text-sm shadow-sm sm:flex-row sm:items-center sm:justify-between">
+            <span className="text-xs text-muted-foreground">
+              {t("auth.page")} {page + 1} - {users.length} {t("auth.pageUsers")}
             </span>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
               <Select
                 value={String(pageSize)}
                 onValueChange={(value) => {
@@ -1019,36 +1010,40 @@ export default function UserManagement() {
                   setPage(0);
                 }}
               >
-                <SelectTrigger className="h-8 w-[110px] bg-background/70" id="select-rows-per-page">
-                  <SelectValue placeholder="Page size" />
+                <SelectTrigger className="h-8 w-[104px] bg-background/70" id="select-rows-per-page">
+                    <SelectValue placeholder={t("auth.pageSize")} />
                 </SelectTrigger>
                 <SelectContent align="start">
                   <SelectGroup>
                     {USER_PAGE_SIZE_OPTIONS.map((size) => (
                       <SelectItem value={String(size)} key={size}>
-                        {size}/trang
+                        {language === "vi" ? `${size}/trang` : `${size}/page`}
                       </SelectItem>
                     ))}
                   </SelectGroup>
                 </SelectContent>
               </Select>
 
-              <Button variant="outline" size="sm" className="bg-background/70 hover:bg-accent/70" onClick={handleFirstPage} disabled={isFetching || page === 0}>
-                First
-              </Button>
-              <Button variant="outline" size="sm" className="bg-background/70 hover:bg-accent/70" onClick={handlePreviousPage} disabled={isFetching || !canGoPrevious}>
-                Prev
-              </Button>
-              <span className="min-w-16 text-center text-xs text-muted-foreground">Trang {page + 1}</span>
-              <Button
-                variant="outline"
-                size="sm"
-                className="bg-background/70 hover:bg-accent/70"
-                onClick={handleNextPage}
-                disabled={isLoading || isFetching || isCheckingNextPage || !canGoNext}
-              >
-                Next
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" className="hidden h-8 bg-background/70 hover:bg-accent/70 sm:inline-flex" onClick={handleFirstPage} disabled={isFetching || page === 0}>
+                  {t("auth.first")}
+                </Button>
+                <Button variant="outline" size="sm" className="h-8 bg-background/70 hover:bg-accent/70" onClick={handlePreviousPage} disabled={isFetching || !canGoPrevious}>
+                  {t("auth.prev")}
+                </Button>
+                <span className="flex h-8 min-w-16 items-center justify-center rounded-md border border-border/70 bg-background/70 px-2 text-xs text-muted-foreground">
+                  {t("auth.page")} {page + 1}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 bg-background/70 hover:bg-accent/70"
+                  onClick={handleNextPage}
+                  disabled={isLoading || isFetching || isCheckingNextPage || !canGoNext}
+                >
+                  {t("auth.next")}
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -1060,36 +1055,34 @@ export default function UserManagement() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Chi tiết người dùng</DialogTitle>
-            <DialogDescription>
-              Thông tin tài khoản và trạng thái hiện tại.
-            </DialogDescription>
+            <DialogTitle>{t("auth.detailTitle")}</DialogTitle>
+            <DialogDescription>{t("auth.detailDescription")}</DialogDescription>
           </DialogHeader>
 
           {detailLoading ? (
             <p className="text-sm text-muted-foreground">
-              Đang tải chi tiết...
+              {t("auth.loadingDetail")}
             </p>
           ) : detailUser ? (
             <div className="space-y-4 text-sm">
               <div className="grid grid-cols-[120px_1fr] gap-2">
-                <span className="text-muted-foreground">ID</span>
+                <span className="text-muted-foreground">{t("auth.detailId")}</span>
                 <span className="font-medium">{detailUser.id}</span>
               </div>
               <div className="grid grid-cols-[120px_1fr] gap-2">
-                <span className="text-muted-foreground">Username</span>
+                <span className="text-muted-foreground">{t("auth.detailUsername")}</span>
                 <span className="font-medium">
-                  {detailUser.username || "Chưa cập nhật"}
+                  {detailUser.username || t("auth.detailNoData")}
                 </span>
               </div>
               <div className="grid grid-cols-[120px_1fr] gap-2">
-                <span className="text-muted-foreground">Email</span>
+                <span className="text-muted-foreground">{t("auth.detailEmail")}</span>
                 <span className="font-medium">
-                  {detailUser.email || "Chưa cập nhật"}
+                  {detailUser.email || t("auth.detailNoData")}
                 </span>
               </div>
               <div className="grid grid-cols-[120px_1fr] gap-2">
-                <span className="text-muted-foreground">Vai trò</span>
+                <span className="text-muted-foreground">{t("auth.detailRole")}</span>
                 <div className="flex flex-wrap gap-1.5">
                   {detailUser.roles?.map((role) => (
                     <Badge key={role.id}>{getRoleLabel(role.name)}</Badge>
@@ -1097,15 +1090,15 @@ export default function UserManagement() {
                 </div>
               </div>
               <div className="grid grid-cols-[120px_1fr] gap-2">
-                <span className="text-muted-foreground">Trạng thái</span>
+                <span className="text-muted-foreground">{t("auth.detailStatus")}</span>
                 <Badge variant={detailUser.login ? "outline" : "destructive"}>
-                  {detailUser.login ? "Đang hoạt động" : "Không hoạt động"}
+                  {detailUser.login ? t("auth.switchActive") : t("auth.switchInactive")}
                 </Badge>
               </div>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Không lấy được dữ liệu chi tiết.
+              {t("auth.detailNoData")}
             </p>
           )}
         </DialogContent>

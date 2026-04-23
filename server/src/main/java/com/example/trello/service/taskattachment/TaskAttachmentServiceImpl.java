@@ -9,17 +9,25 @@ import com.example.trello.model.Task;
 import com.example.trello.model.TaskAttachment;
 import com.example.trello.repository.TaskAttachmentRepository;
 import com.example.trello.repository.TaskRepository;
-import com.example.trello.service.cloudinary.CloudinaryService;
 import com.example.trello.service.taskactivity.TaskActivityService;
 import com.example.trello.utils.JwtUtil;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -28,10 +36,10 @@ public class TaskAttachmentServiceImpl implements TaskAttachmentService {
 
     static final long MAX_ATTACHMENT_SIZE_BYTES = 15L * 1024L * 1024L;
     static final Set<String> BLOCKED_EXTENSIONS = Set.of("exe", "bat", "cmd", "sh", "msi", "js");
+    static final Path ATTACHMENT_ROOT = Paths.get("upload-dir", "task-attachments").toAbsolutePath().normalize();
 
     TaskRepository taskRepository;
     TaskAttachmentRepository taskAttachmentRepository;
-    CloudinaryService cloudinaryService;
     JwtUtil jwtUtil;
     TaskActivityService taskActivityService;
 
@@ -53,12 +61,12 @@ public class TaskAttachmentServiceImpl implements TaskAttachmentService {
 
         validateAttachment(file);
 
-        String fileUrl = cloudinaryService.uploadTaskAttachment(file, taskId);
+        String storedPath = storeFile(taskId, file);
 
         TaskAttachment attachment = TaskAttachment.builder()
                 .task(task)
                 .fileName(resolveFileName(file))
-                .fileUrl(fileUrl)
+            .fileUrl(storedPath)
                 .fileSize(file.getSize())
                 .mimeType(resolveMimeType(file))
                 .build();
@@ -73,6 +81,54 @@ public class TaskAttachmentServiceImpl implements TaskAttachmentService {
     }
 
     @Override
+    public TaskAttachmentDownloadData getAttachmentForDownload(Long attachmentId) {
+        TaskAttachment attachment = taskAttachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new AppError(ErrorCode.TASK_ATTACHMENT_NOT_FOUND));
+
+        String storedUrlOrPath = attachment.getFileUrl();
+
+        if (storedUrlOrPath != null && (storedUrlOrPath.startsWith("http://") || storedUrlOrPath.startsWith("https://"))) {
+            try {
+                Resource legacyResource = new UrlResource(storedUrlOrPath);
+                if (!legacyResource.exists() || !legacyResource.isReadable()) {
+                    throw new AppError(ErrorCode.TASK_ATTACHMENT_NOT_FOUND);
+                }
+
+                return new TaskAttachmentDownloadData(
+                        legacyResource,
+                        attachment.getFileName(),
+                        attachment.getMimeType(),
+                        attachment.getFileSize() != null ? attachment.getFileSize() : 0L
+                );
+            } catch (MalformedURLException exception) {
+                throw new AppError(ErrorCode.TASK_ATTACHMENT_NOT_FOUND);
+            }
+        }
+
+        Path filePath = resolveStoredPath(attachment);
+
+        if (!Files.exists(filePath) || !Files.isRegularFile(filePath)) {
+            throw new AppError(ErrorCode.TASK_ATTACHMENT_NOT_FOUND);
+        }
+
+        try {
+            Resource resource = new UrlResource(filePath.toUri());
+            if (!resource.exists() || !resource.isReadable()) {
+                throw new AppError(ErrorCode.TASK_ATTACHMENT_NOT_FOUND);
+            }
+
+            return new TaskAttachmentDownloadData(
+                    resource,
+                    attachment.getFileName(),
+                    attachment.getMimeType(),
+                    attachment.getFileSize() != null ? attachment.getFileSize() : filePath.toFile().length()
+            );
+        } catch (MalformedURLException exception) {
+            throw new AppError(ErrorCode.TASK_ATTACHMENT_NOT_FOUND);
+        }
+    }
+
+    @Override
     public void deleteAttachment(Long attachmentId) {
         TaskAttachment attachment = taskAttachmentRepository.findById(attachmentId)
                 .orElseThrow(() -> new AppError(ErrorCode.TASK_ATTACHMENT_NOT_FOUND));
@@ -80,7 +136,7 @@ public class TaskAttachmentServiceImpl implements TaskAttachmentService {
         Task task = attachment.getTask();
         String fileName = attachment.getFileName();
 
-        cloudinaryService.deleteByUrl(attachment.getFileUrl());
+        deleteStoredFile(attachment);
         taskAttachmentRepository.delete(attachment);
 
         Account actor = jwtUtil.getCurrentUserLogin();
@@ -91,7 +147,7 @@ public class TaskAttachmentServiceImpl implements TaskAttachmentService {
     @Override
     public void deleteByTaskId(Long taskId) {
         taskAttachmentRepository.findAllByTaskIdOrderByCreatedAtDesc(taskId)
-                .forEach(attachment -> cloudinaryService.deleteByUrl(attachment.getFileUrl()));
+                .forEach(this::deleteStoredFile);
 
         taskAttachmentRepository.deleteByTaskId(taskId);
     }
@@ -99,7 +155,7 @@ public class TaskAttachmentServiceImpl implements TaskAttachmentService {
     @Override
     public void deleteAll() {
         taskAttachmentRepository.findAll()
-                .forEach(attachment -> cloudinaryService.deleteByUrl(attachment.getFileUrl()));
+                .forEach(this::deleteStoredFile);
 
         taskAttachmentRepository.deleteAll();
     }
@@ -109,7 +165,7 @@ public class TaskAttachmentServiceImpl implements TaskAttachmentService {
                 .id(attachment.getId())
                 .taskId(attachment.getTask() != null ? attachment.getTask().getId() : null)
                 .fileName(attachment.getFileName())
-                .fileUrl(attachment.getFileUrl())
+                .fileUrl("/task-attachments/download/" + attachment.getId())
                 .fileSize(attachment.getFileSize())
                 .mimeType(attachment.getMimeType())
                 .createdAt(attachment.getCreatedAt())
@@ -158,6 +214,54 @@ public class TaskAttachmentServiceImpl implements TaskAttachmentService {
             if (BLOCKED_EXTENSIONS.contains(extension)) {
                 throw new AppError(ErrorCode.TASK_ATTACHMENT_INVALID_FILE_TYPE);
             }
+        }
+    }
+
+    private String storeFile(Long taskId, MultipartFile file) {
+        try {
+            Files.createDirectories(ATTACHMENT_ROOT);
+
+            String originalFileName = resolveFileName(file);
+            String extension = "";
+            int dotIndex = originalFileName.lastIndexOf('.');
+            if (dotIndex > -1 && dotIndex < originalFileName.length() - 1) {
+                extension = originalFileName.substring(dotIndex);
+            }
+
+            String storedFileName = "task_" + taskId + "_" + System.currentTimeMillis() + "_" + UUID.randomUUID() + extension;
+            Path destination = ATTACHMENT_ROOT.resolve(storedFileName).normalize();
+
+            if (!destination.startsWith(ATTACHMENT_ROOT)) {
+                throw new AppError(ErrorCode.TASK_ATTACHMENT_UPLOAD_FAILED);
+            }
+
+            Files.copy(file.getInputStream(), destination, StandardCopyOption.REPLACE_EXISTING);
+            return destination.toString();
+        } catch (IOException exception) {
+            throw new AppError(ErrorCode.TASK_ATTACHMENT_UPLOAD_FAILED);
+        }
+    }
+
+    private Path resolveStoredPath(TaskAttachment attachment) {
+        String storedPath = attachment.getFileUrl();
+        if (storedPath == null || storedPath.isBlank()) {
+            throw new AppError(ErrorCode.TASK_ATTACHMENT_NOT_FOUND);
+        }
+
+        Path path = Paths.get(storedPath).toAbsolutePath().normalize();
+        if (!path.startsWith(ATTACHMENT_ROOT)) {
+            throw new AppError(ErrorCode.TASK_ATTACHMENT_NOT_FOUND);
+        }
+
+        return path;
+    }
+
+    private void deleteStoredFile(TaskAttachment attachment) {
+        try {
+            Path path = resolveStoredPath(attachment);
+            Files.deleteIfExists(path);
+        } catch (Exception ignored) {
+            // Ignore cleanup failure to avoid blocking delete flow.
         }
     }
 }

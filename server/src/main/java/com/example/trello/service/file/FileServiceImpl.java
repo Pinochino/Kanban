@@ -36,7 +36,24 @@ public class FileServiceImpl implements FileService {
             throw new StorageException("File upload location can not be Empty.");
         }
 
-        this.rootLocation = Paths.get(properties.getLocation());
+        this.rootLocation = resolveStorageRoot(properties.getLocation());
+    }
+
+    private Path resolveStorageRoot(String configuredLocation) {
+        Path configuredPath = Paths.get(configuredLocation);
+
+        if (configuredPath.isAbsolute()) {
+            return configuredPath.normalize();
+        }
+
+        Path workingDir = Paths.get("").toAbsolutePath().normalize();
+        Path serverDirFromRoot = workingDir.resolve("server");
+
+        if (Files.isDirectory(serverDirFromRoot)) {
+            return serverDirFromRoot.resolve(configuredPath).normalize();
+        }
+
+        return workingDir.resolve(configuredPath).normalize();
     }
 
     @Override

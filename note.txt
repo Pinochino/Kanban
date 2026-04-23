@@ -1,0 +1,7 @@
+chạy docker compose up --build -d
+
+Nếu cần reset sạch dữ liệu để chạy lại từ đầu:
+
+cd deploy
+docker compose down -v
+docker compose up --build -d

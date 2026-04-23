@@ -12,7 +12,6 @@ import org.mapstruct.factory.Mappers;
 @Mapper(componentModel = "spring", uses = {
                 ListTaskMapper.class,
                 TaskMapper.class,
-                LabelMapper.class,
 })
 public interface ProjectMapper {
 

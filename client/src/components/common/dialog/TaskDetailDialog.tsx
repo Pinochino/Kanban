@@ -54,11 +54,116 @@ type LabelDto = {
 };
 
 type TaskLabelDto = {
+  id?: unknown;
+  taskId?: unknown;
+  labelId?: unknown;
+  label_id?: unknown;
+  title?: unknown;
+  color?: unknown;
+  name?: unknown;
+  labelTitle?: unknown;
+  labelColor?: unknown;
+  labelResponse?: {
+    id?: unknown;
+    title?: unknown;
+    color?: unknown;
+    name?: unknown;
+  };
+  label?: {
+    id?: unknown;
+    title?: unknown;
+    color?: unknown;
+    name?: unknown;
+  };
+};
+
+type NormalizedTaskLabel = {
   id: number;
-  taskId: number;
   labelId: number;
   title: string;
-  color: string;
+  color?: string;
+};
+
+const extractTaskLabelItems = (payload: unknown): unknown[] => {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  if (!payload || typeof payload !== "object") {
+    return [];
+  }
+
+  const dto = payload as {
+    items?: unknown;
+    content?: unknown;
+    data?: unknown;
+    taskLabels?: unknown;
+    labels?: unknown;
+  };
+
+  if (Array.isArray(dto.items)) {
+    return dto.items;
+  }
+
+  if (Array.isArray(dto.content)) {
+    return dto.content;
+  }
+
+  if (Array.isArray(dto.taskLabels)) {
+    return dto.taskLabels;
+  }
+
+  if (Array.isArray(dto.labels)) {
+    return dto.labels;
+  }
+
+  if (Array.isArray(dto.data)) {
+    return dto.data;
+  }
+
+  return [];
+};
+
+const normalizeTaskLabels = (data: unknown): NormalizedTaskLabel[] => {
+  return extractTaskLabelItems(data)
+    .map((item, index): NormalizedTaskLabel | null => {
+      if (!item || typeof item !== "object") {
+        return null;
+      }
+
+      const dto = item as TaskLabelDto;
+      const nestedLabel = dto.label && typeof dto.label === "object" ? dto.label : undefined;
+      const nestedLabelResponse =
+        dto.labelResponse && typeof dto.labelResponse === "object" ? dto.labelResponse : undefined;
+      const rawTitle =
+        dto.title ??
+        dto.name ??
+        dto.labelTitle ??
+        nestedLabel?.title ??
+        nestedLabel?.name ??
+        nestedLabelResponse?.title ??
+        nestedLabelResponse?.name;
+      const rawColor = dto.color ?? dto.labelColor ?? nestedLabel?.color ?? nestedLabelResponse?.color;
+      const rawLabelId = dto.labelId ?? dto.label_id ?? nestedLabel?.id ?? nestedLabelResponse?.id;
+      const rawId = dto.id ?? rawLabelId ?? index + 1;
+
+      const title = String(rawTitle ?? "").trim();
+      if (!title) {
+        return null;
+      }
+
+      const color = String(rawColor ?? "").trim();
+      const parsedLabelId = Number(rawLabelId);
+      const parsedId = Number(rawId);
+
+      return {
+        id: Number.isFinite(parsedId) ? parsedId : index + 1,
+        labelId: Number.isFinite(parsedLabelId) ? parsedLabelId : 0,
+        title,
+        color: color || undefined,
+      };
+    })
+    .filter((item): item is NormalizedTaskLabel => Boolean(item));
 };
 
 type CommentDto = {
@@ -81,7 +186,7 @@ type TaskAttachmentDto = {
   id: number;
   taskId: number;
   fileName: string;
-  fileUrl: string;
+  fileUrl?: string;
   fileSize: number;
   mimeType: string;
   createdAt?: string;
@@ -191,14 +296,12 @@ const TaskDetailDialog = ({
   const labels = useMemo(() => (Array.isArray(labelsData) ? (labelsData as LabelDto[]) : []), [labelsData]);
 
   const taskLabelsUrl = `${apiName.taskLabels.list}/${task?.id ?? ""}`;
-  const { data: taskLabelsData } = useGetAllData({ url: taskLabelsUrl, enabled: isTaskEditable && Boolean(task?.id) });
-  const taskLabels = useMemo(
-    () => (Array.isArray(taskLabelsData) ? (taskLabelsData as TaskLabelDto[]) : []),
-    [taskLabelsData],
-  );
+  const { data: taskLabelsData } = useGetAllData({ url: taskLabelsUrl, enabled: Boolean(task?.id) });
+  const taskLabels = useMemo(() => normalizeTaskLabels(taskLabelsData), [taskLabelsData]);
 
   const commentsUrl = `${apiName.comments.list}/${task?.id ?? ""}`;
-  const { data: commentsData } = useGetAllData({ url: commentsUrl, enabled: canComment && Boolean(task?.id) });
+  const commentsQuery = useGetAllData({ url: commentsUrl, enabled: Boolean(task?.id) });
+  const { data: commentsData } = commentsQuery;
   const comments = useMemo(() => (Array.isArray(commentsData) ? (commentsData as CommentDto[]) : []), [commentsData]);
 
   const taskActivitiesUrl = `${apiName.taskActivities.list}/${task?.id ?? ""}`;
@@ -214,11 +317,35 @@ const TaskDetailDialog = ({
   }, [taskActivities]);
 
   const taskAttachmentsUrl = `${apiName.taskAttachments.list}/${task?.id ?? ""}`;
-  const { data: taskAttachmentsData } = useGetAllData({ url: taskAttachmentsUrl, enabled: Boolean(task?.id) });
+  const taskAttachmentsQuery = useGetAllData({ url: taskAttachmentsUrl, enabled: Boolean(task?.id) });
+  const { data: taskAttachmentsData } = taskAttachmentsQuery;
   const taskAttachments = useMemo(
     () => (Array.isArray(taskAttachmentsData) ? (taskAttachmentsData as TaskAttachmentDto[]) : []),
     [taskAttachmentsData],
   );
+
+  useEffect(() => {
+    if (!task || !onTaskUpdated) {
+      return;
+    }
+
+    if (!commentsQuery.isSuccess || !taskAttachmentsQuery.isSuccess) {
+      return;
+    }
+
+    const nextCommentCount = comments.length;
+    const nextAttachmentCount = taskAttachments.length;
+
+    if (task.comments === nextCommentCount && task.attachments === nextAttachmentCount) {
+      return;
+    }
+
+    onTaskUpdated({
+      ...task,
+      comments: nextCommentCount,
+      attachments: nextAttachmentCount,
+    });
+  }, [comments.length, onTaskUpdated, task, taskAttachments.length]);
 
   const filteredAttachments = useMemo(() => {
     const query = attachmentQuery.trim().toLowerCase();
@@ -241,7 +368,10 @@ const TaskDetailDialog = ({
     };
   }, [taskAttachments]);
 
-  const selectedLabelIds = useMemo(() => new Set(taskLabels.map((item) => Number(item.labelId))), [taskLabels]);
+  const selectedLabelIds = useMemo(
+    () => new Set(taskLabels.map((item) => Number(item.labelId)).filter((value) => Number.isFinite(value) && value > 0)),
+    [taskLabels],
+  );
   const assignedByName = useMemo(() => {
     const createdActivity = taskActivities.find((activity) => activity.actionType === "CREATE");
     return createdActivity?.account?.username ?? t("taskDetail.unknown");
@@ -297,6 +427,7 @@ const TaskDetailDialog = ({
   const refreshTaskRelatedData = async () => {
     if (task) {
       await queryClient.invalidateQueries({ queryKey: [`${apiName.taskLabels.list}/${task.id}`] });
+      await queryClient.invalidateQueries({ queryKey: [apiName.taskLabels.list] });
       await queryClient.invalidateQueries({ queryKey: [`${apiName.comments.list}/${task.id}`] });
       await queryClient.invalidateQueries({ queryKey: [`${apiName.taskActivities.list}/${task.id}`] });
       await queryClient.invalidateQueries({ queryKey: [`${apiName.taskAttachments.list}/${task.id}`] });
@@ -390,6 +521,7 @@ const TaskDetailDialog = ({
           title: newLabelTitle.trim(),
           color: newLabelColor,
           projectId: Number(projectId),
+          taskId: Number(task.id),
         },
       });
     },
@@ -582,6 +714,40 @@ const TaskDetailDialog = ({
     return <FileText className="h-4 w-4" />;
   };
 
+  const downloadAttachment = async (attachment: TaskAttachmentDto) => {
+    try {
+      const response = await handleApi({
+        url: `${apiName.taskAttachments.download}/${attachment.id}`,
+        method: "GET",
+        responseType: "blob",
+        withCredentials: true,
+      });
+
+      const contentDisposition = String(response.headers?.["content-disposition"] ?? "");
+      const utf8NameMatch = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+      const quotedNameMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
+      const extractedName = utf8NameMatch?.[1]
+        ? decodeURIComponent(utf8NameMatch[1])
+        : quotedNameMatch?.[1];
+      const fileName = extractedName || attachment.fileName || `attachment-${attachment.id}`;
+
+      const blob = new Blob([response.data], {
+        type: attachment.mimeType || "application/octet-stream",
+      });
+
+      const objectUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(objectUrl);
+    } catch {
+      toast.error(language === "vi" ? "Không thể tải file" : "Unable to download file");
+    }
+  };
+
   if (!task) {
     return null;
   }
@@ -683,60 +849,38 @@ const TaskDetailDialog = ({
           ) : null}
         </form>
 
-        {isTaskEditable ? (
-          <div className="space-y-3 border-t pt-4">
-          <h3 className="font-medium">{language === "vi" ? "Label" : "Labels"}</h3>
+        <div className="space-y-3 border-t pt-4">
 
-          <div className="flex flex-wrap gap-2">
-            {labels.map((label) => {
-              const isSelected = selectedLabelIds.has(Number(label.id));
+      
 
-              return (
-                <Button
-                  key={label.id}
-                  type="button"
-                  variant={isSelected ? "default" : "outline"}
-                  className="h-8"
-                  onClick={() => toggleTaskLabelMutation.mutate(Number(label.id))}
-                >
-                  <span
-                    className="mr-2 inline-block h-2.5 w-2.5 rounded-full"
-                    style={{ backgroundColor: label.color || "#64748b" }}
-                  />
-                  {label.title}
-                </Button>
-              );
-            })}
-          </div>
+          {isTaskEditable ? (
+            <>
+              <div className="flex flex-wrap gap-2">
+                {labels.map((label) => {
+                  const isSelected = selectedLabelIds.has(Number(label.id));
 
-          <div className="grid gap-2 md:grid-cols-[1fr_120px_auto]">
-            <Input
-              value={newLabelTitle}
-              onChange={(event) => setNewLabelTitle(event.target.value)}
-              placeholder={language === "vi" ? "Tiêu đề label" : "Label title"}
-            />
-            <Input
-              type="color"
-              value={newLabelColor}
-              onChange={(event) => setNewLabelColor(event.target.value)}
-              className="h-10 p-1"
-            />
-            <Button type="button" onClick={() => createLabelMutation.mutate()}>
-              <Plus className="h-4 w-4" />
-              {language === "vi" ? "Thêm label" : "Add label"}
-            </Button>
-          </div>
+                  return (
+                    <Button
+                      key={label.id}
+                      type="button"
+                      variant={isSelected ? "default" : "outline"}
+                      className="h-8"
+                      onClick={() => toggleTaskLabelMutation.mutate(Number(label.id))}
+                    >
+                      <span
+                        className="mr-2 inline-block h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: label.color || "#64748b" }}
+                      />
+                      {label.title}
+                    </Button>
+                  );
+                })}
+              </div>
 
-          <div className="flex flex-wrap gap-2">
-            {taskLabels.map((item) => (
-              <Badge key={item.id} variant="secondary" className="border">
-                <span className="mr-1 inline-block h-2 w-2 rounded-full" style={{ backgroundColor: item.color || "#64748b" }} />
-                {item.title}
-              </Badge>
-            ))}
-          </div>
-          </div>
-        ) : null}
+           
+            </>
+          ) : null}
+        </div>
 
         {canAdvanceStatus ? (
           <div className="space-y-3 border-t pt-4">
@@ -891,15 +1035,14 @@ const TaskDetailDialog = ({
               filteredAttachments.map((attachment) => (
                 <div key={attachment.id} className="flex items-center justify-between gap-3 rounded-md border p-3">
                   <div className="min-w-0 flex-1">
-                    <a
-                      href={attachment.fileUrl}
-                      target="_blank"
-                      rel="noreferrer"
+                    <button
+                      type="button"
+                      onClick={() => void downloadAttachment(attachment)}
                       className="flex items-center gap-2 truncate text-sm font-medium underline-offset-2 hover:underline"
                     >
                       {getAttachmentIcon(attachment.mimeType)}
                       {attachment.fileName}
-                    </a>
+                    </button>
                     <p className="text-xs text-muted-foreground">
                       {attachment.mimeType || "application/octet-stream"} • {formatFileSize(Number(attachment.fileSize ?? 0))}
                       {attachment.createdAt ? ` • ${formatDate(attachment.createdAt, language)}` : ""}

@@ -21,7 +21,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
         <AdminSidebar />
-        <div className="flex flex-1 flex-col bg-gradient-to-b from-background via-background to-muted/20">
+        <div className="flex min-w-0 flex-1 flex-col bg-gradient-to-b from-background via-background to-muted/20">
           <header className={cn(
             "sticky top-0 z-20 border-b border-border/70",
             "bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70",
@@ -43,7 +43,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               </div>
             </div>
           </header>
-          <main className="flex-1 overflow-auto p-4 lg:p-6">
+          <main className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-6">
             {isTransitionLoading ? <RoutePageSkeleton /> : children ?? <Outlet />}
           </main>
         </div>

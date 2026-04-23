@@ -7,6 +7,7 @@ import com.example.trello.model.Notification;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -64,6 +65,14 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
                                            @Param("unreadOnly") boolean unreadOnly);
 
     List<Notification> findByStatusAndScheduledAtLessThanEqual(NotificationStatus status, LocalDateTime scheduledAt);
+
+    List<Notification> findByTaskId(Long taskId);
+
+    List<Notification> findByTaskIdIn(List<Long> taskIds);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update Notification n set n.task = null where n.task.id = :taskId")
+    int clearTaskReferenceByTaskId(@Param("taskId") Long taskId);
 
     boolean existsByRecipientAccountIdAndTaskIdAndTypeAndChannel(Long recipientAccountId,
                                    Long taskId,

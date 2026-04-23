@@ -1,11 +1,10 @@
 import { useMemo } from "react";
 
 import { apiName } from "@/api/apiName";
-import TaskList from "@/domains/projects/TaskList";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useGetAllData } from "@/hooks/useGetAllData";
 import { Card, CardContent } from "@/components/ui/card";
-import { Kanban } from "lucide-react";
+import { ArrowRight, Kanban } from "lucide-react";
 import { IProject, IListTask, ITask } from "@/types/ProjectInterface";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -83,16 +82,16 @@ const MyTasks = () => {
             <p className="max-w-2xl text-sm text-slate-200">{t("taskBoard.myTasksDescription")}</p>
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-3">
-            <div className="rounded-xl border border-white/10 bg-white/10 px-4 py-3">
+          <div className="grid w-full gap-2 sm:grid-cols-3 md:w-auto md:min-w-[360px]">
+            <div className="min-w-[110px] rounded-xl border border-white/10 bg-white/10 px-4 py-3">
               <p className="text-xs text-slate-200">{t("taskBoard.statTasks")}</p>
               <p className="text-2xl font-semibold">{stats.total}</p>
             </div>
-            <div className="rounded-xl border border-white/10 bg-white/10 px-4 py-3">
+            <div className="min-w-[110px] rounded-xl border border-white/10 bg-white/10 px-4 py-3">
               <p className="text-xs text-slate-200">{t("taskBoard.statProjects")}</p>
               <p className="text-2xl font-semibold">{stats.projectCount}</p>
             </div>
-            <div className="rounded-xl border border-white/10 bg-white/10 px-4 py-3">
+            <div className="min-w-[110px] rounded-xl border border-white/10 bg-white/10 px-4 py-3">
               <p className="text-xs text-slate-200">{t("taskBoard.statCompleted")}</p>
               <p className="text-2xl font-semibold">{stats.completion}%</p>
             </div>
@@ -129,19 +128,45 @@ const MyTasks = () => {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-5">
-          {myProjects.map((project) => (
-            <TaskList
-              key={project.id}
-              projectList={[project]}
-              selectedProjectId={project.id}
-              currentUserId={user?.id}
-              canManageTasks={false}
-              allowTaskDrag
-            />
-          ))}
-        </div>
-      )}
+        <Card>
+          <CardContent className="p-6">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold">{t("taskBoard.statProjects")}</h2>
+              <p className="text-sm text-muted-foreground">{t("taskBoard.selectProject")}</p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {myProjects.map((project) => {
+                const myTasks = (project.listTasks ?? []).flatMap((listTask: IListTask) =>
+                  (listTask.taskList ?? []).filter((task: ITask) => String(task.assignedAccount?.id ?? "") === String(user?.id ?? "")),
+                );
+                const doneCount = myTasks.filter((task: ITask) => String(task.listTaskStatus ?? "").toLowerCase() === "done").length;
+
+                return (
+                  <Card key={project.id} className="border border-slate-200">
+                    <CardContent className="space-y-3 p-4">
+                      <h3 className="line-clamp-2 text-base font-semibold">{project.title}</h3>
+                      <p className="line-clamp-2 text-sm text-muted-foreground">{project.description || t("projectList.noDescription")}</p>
+
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>{myTasks.length} {t("taskBoard.statTasks")}</span>
+                        <span>{doneCount} {t("taskBoard.statCompleted")}</span>
+                      </div>
+
+                      <Button className="w-full" variant="outline" asChild>
+                        <Link to={`/my-tasks/${project.id}/tasks`}>
+                          <ArrowRight className="h-4 w-4" />
+                          {t("projectList.openTasks")}
+                        </Link>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+        )}
     </div>
   );
 };

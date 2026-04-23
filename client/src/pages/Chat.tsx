@@ -201,6 +201,49 @@ const ChatPage = () => {
         : false,
   });
 
+  useEffect(() => {
+    if (activeTab !== "direct" || !selectedDirectId) {
+      return;
+    }
+
+    let reducedUnread = 0;
+
+    queryClient.setQueryData<IChatContact[]>([apiName.chats.contacts], (current) => {
+      if (!Array.isArray(current)) {
+        return current;
+      }
+
+      return current.map((contact) => {
+        if (String(contact.id) !== String(selectedDirectId)) {
+          return contact;
+        }
+
+        const unread = Number(contact.unreadCount ?? 0);
+        reducedUnread = Number.isFinite(unread) ? unread : 0;
+
+        if (reducedUnread <= 0) {
+          return contact;
+        }
+
+        return {
+          ...contact,
+          unreadCount: 0,
+        };
+      });
+    });
+
+    if (reducedUnread > 0) {
+      queryClient.setQueryData<number>(["unread-chat-count", user?.id], (currentCount) => {
+        const total = Number(currentCount ?? 0);
+        const safeTotal = Number.isFinite(total) ? total : 0;
+        return Math.max(0, safeTotal - reducedUnread);
+      });
+    }
+
+    void queryClient.invalidateQueries({ queryKey: [apiName.chats.contacts] });
+    void queryClient.invalidateQueries({ queryKey: ["unread-chat-count", user?.id] });
+  }, [activeTab, selectedDirectId, queryClient, user?.id]);
+
   const sendMessageMutation = useMutation({
     mutationFn: async (payload: SendMessagePayload) => {
       const response = await handleApi({

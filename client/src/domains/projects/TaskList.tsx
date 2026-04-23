@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  closestCorners,
   DndContext,
   DragEndEvent,
+  MouseSensor,
   PointerSensor,
-  pointerWithin,
+  TouchSensor,
   useDroppable,
   useSensor,
   useSensors,
@@ -21,7 +23,6 @@ import {
   Grid2x2,
   GripVertical,
   Kanban,
-  LayoutList,
   Loader2,
   MessageSquare,
   Paperclip,
@@ -61,10 +62,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import CreateTaskDialog from "@/components/common/dialog/CreateTaskDialog";
 import TaskDetailDialog from "@/components/common/dialog/TaskDetailDialog";
-import { defaultNewTask, formatDate, getPriorityMeta, getStatusMeta, initials, statusOrder, Task, TaskPriority, TaskStatus } from "@/domains/projects/taskBoard";
+import { defaultNewTask, formatDate, getPriorityMeta, getStatusMeta, initials, statusOrder, Task, TaskPriority, TaskStatus, TaskTag } from "@/domains/projects/taskBoard";
 import { ICreateTask } from "@/types/TaskInterface";
 import { IProject, IListTask, ITask } from "@/types/ProjectInterface";
 import { FormEvent } from "react";
@@ -222,6 +223,100 @@ const buildTaskFromApi = (
   tags: [],
 });
 
+type TaskLabelDto = {
+  id?: unknown;
+  taskId?: unknown;
+  labelId?: unknown;
+  title?: unknown;
+  color?: unknown;
+  name?: unknown;
+  labelTitle?: unknown;
+  labelColor?: unknown;
+  labelResponse?: {
+    id?: unknown;
+    title?: unknown;
+    color?: unknown;
+    name?: unknown;
+  };
+  label?: {
+    id?: unknown;
+    title?: unknown;
+    color?: unknown;
+    name?: unknown;
+  };
+};
+
+const extractTaskLabelItems = (payload: unknown): unknown[] => {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  if (!payload || typeof payload !== "object") {
+    return [];
+  }
+
+  const dto = payload as {
+    items?: unknown;
+    content?: unknown;
+    data?: unknown;
+    taskLabels?: unknown;
+    labels?: unknown;
+  };
+
+  if (Array.isArray(dto.items)) {
+    return dto.items;
+  }
+
+  if (Array.isArray(dto.content)) {
+    return dto.content;
+  }
+
+  if (Array.isArray(dto.taskLabels)) {
+    return dto.taskLabels;
+  }
+
+  if (Array.isArray(dto.labels)) {
+    return dto.labels;
+  }
+
+  if (Array.isArray(dto.data)) {
+    return dto.data;
+  }
+
+  return [];
+};
+
+const normalizeTaskTag = (item: unknown): TaskTag | null => {
+  if (!item || typeof item !== "object") {
+    return null;
+  }
+
+  const dto = item as TaskLabelDto;
+  const nestedLabel = dto.label && typeof dto.label === "object" ? dto.label : undefined;
+  const nestedLabelResponse =
+    dto.labelResponse && typeof dto.labelResponse === "object" ? dto.labelResponse : undefined;
+  const rawTitle =
+    dto.title ??
+    dto.name ??
+    dto.labelTitle ??
+    nestedLabel?.title ??
+    nestedLabel?.name ??
+    nestedLabelResponse?.title ??
+    nestedLabelResponse?.name;
+  const rawColor = dto.color ?? dto.labelColor ?? nestedLabel?.color ?? nestedLabelResponse?.color;
+
+  const title = String(rawTitle ?? "").trim();
+  if (!title) {
+    return null;
+  }
+
+  const color = String(rawColor ?? "").trim();
+  return {
+    title,
+    color: color || undefined,
+  };
+};
+
 const sortTasks = (items: Task[]) =>
   [...items].sort((left, right) => {
     const leftOrderIndex = left.orderIndex ?? Number.POSITIVE_INFINITY;
@@ -250,7 +345,7 @@ const sortTasks = (items: Task[]) =>
 const buildTaskUpdatePayload = (task: Task, listTaskId: string, orderIndex: number) => ({
   title: task.title,
   description: task.description,
-  assignedAccountId: Number(task.assignedAccountId ?? 0),
+  assignedAccountId: task.assignedAccountId ? Number(task.assignedAccountId) : undefined,
   listTaskId: Number(listTaskId),
   dueDate: toApiDateTime(task.dueDate),
   reminderDate: toApiDateTime(task.reminderDate),
@@ -286,7 +381,10 @@ const TaskBoardCard = ({
     <Card
       ref={setNodeRef}
       style={style}
-      className="w-full min-w-0 cursor-grab border bg-card/95 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing"
+      className={cn(
+        "w-full min-w-0 border bg-card/95 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md",
+        canDrag ? "cursor-grab active:cursor-grabbing touch-none" : "cursor-pointer",
+      )}
       {...(canDrag ? { ...attributes, ...listeners } : {})}
       onClick={() => onOpenDetail(task)}
     >
@@ -314,42 +412,16 @@ const TaskBoardCard = ({
         </div>
 
         <div className="flex flex-wrap gap-1">
-          {task.tags.length > 0 ? (
-            task.tags.map((tag) => (
-              <Badge key={tag} variant="secondary" className="text-[10px]">
-                {tag}
+          {task.tags.map((tag) => (
+              <Badge
+                key={`${tag.title}-${tag.color ?? "default"}`}
+                variant="secondary"
+                className="border text-[10px] text-white"
+                style={{ backgroundColor: tag.color ?? "#64748b" }}
+              >
+                {tag.title}
               </Badge>
-            ))
-          ) : (
-            <Badge variant="secondary" className="text-[10px]">
-              {t("taskBoard.noTags")}
-            </Badge>
-          )}
-        </div>
-
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1">
-              <LayoutList className="h-3.5 w-3.5" />
-              {t("taskBoard.tableChecklist")}
-            </span>
-            <span>
-              {task.checklistDone}/{task.checklistTotal}
-            </span>
-          </div>
-          <div className="h-1.5 rounded-full bg-muted">
-            <div
-              className="h-1.5 rounded-full bg-primary"
-              style={{
-                width:
-                  task.checklistTotal > 0
-                    ? `${Math.round((task.checklistDone / task.checklistTotal) * 100)}%`
-                    : task.status === "done"
-                      ? "100%"
-                      : "0%",
-              }}
-            />
-          </div>
+            ))}
         </div>
 
         <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -505,7 +577,6 @@ const TaskList = ({
   canManageTasks = true,
   allowTaskDrag,
 }: TaskListProps) => {
-  const queryClient = useQueryClient();
   const { language, t } = useI18n();
   const [search, setSearch] = useState<string>("");
   const [viewMode, setViewMode] = useState<"table" | "kanban">("kanban");
@@ -523,7 +594,11 @@ const TaskList = ({
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const debouncedSearch = useDebounce({ value: search, delay: 400 });
 
-  const sensor = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 3 } }));
+  const sensor = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 160, tolerance: 10 } }),
+  );
   const canDragTasks = allowTaskDrag ?? canManageTasks;
   const statusMeta = useMemo(() => getStatusMeta(language), [language]);
   const priorityMeta = useMemo(() => getPriorityMeta(language), [language]);
@@ -670,6 +745,69 @@ const TaskList = ({
     setBoardTasks(searchedTaskPage?.items ?? []);
   }, [searchedTaskPage]);
 
+  const taskIdsForLabels = useMemo(
+    () => Array.from(new Set(boardTasks.map((task) => String(task.id))).values()).sort(),
+    [boardTasks],
+  );
+
+  const { data: taskTagsByTaskId = {} } = useQuery({
+    queryKey: [apiName.taskLabels.list, taskIdsForLabels.join(",")],
+    enabled: taskIdsForLabels.length > 0,
+    queryFn: async (): Promise<Record<string, TaskTag[]>> => {
+      const entries = await Promise.all(
+        taskIdsForLabels.map(async (taskId) => {
+          try {
+            const response = await handleApi({
+              url: `${apiName.taskLabels.list}/${taskId}`,
+              method: "GET",
+              withCredentials: true,
+            });
+
+            const payload = response.data?.data;
+            const tags = extractTaskLabelItems(payload)
+              .map((item) => normalizeTaskTag(item))
+              .filter((item): item is TaskTag => Boolean(item));
+
+            return [taskId, tags] as const;
+          } catch {
+            return [taskId, []] as const;
+          }
+        }),
+      );
+
+      return Object.fromEntries(entries);
+    },
+    staleTime: 2000,
+  });
+
+  useEffect(() => {
+    if (Object.keys(taskTagsByTaskId).length === 0) {
+      return;
+    }
+
+    setBoardTasks((previousTasks) => {
+      let changed = false;
+
+      const nextTasks = previousTasks.map((task) => {
+        const tags = taskTagsByTaskId[String(task.id)] ?? [];
+        const prevSerialized = JSON.stringify(task.tags ?? []);
+        const nextSerialized = JSON.stringify(tags);
+
+        if (prevSerialized === nextSerialized) {
+          return task;
+        }
+
+        changed = true;
+        return {
+          ...task,
+          tags,
+        };
+      });
+
+      return changed ? nextTasks : previousTasks;
+    });
+  }, [taskTagsByTaskId]);
+
   const paginatedTasks = useMemo(() => boardTasks, [boardTasks]);
   const totalTasks = searchedTaskPage?.totalElements ?? 0;
   const totalPages = Math.max(1, searchedTaskPage?.totalPages ?? 1);
@@ -723,20 +861,6 @@ const TaskList = ({
 
     return result;
   }, [boardProject]);
-
-  const refreshTaskBoardQueries = async () => {
-    await queryClient.invalidateQueries({ queryKey: [apiName.projects.list] });
-
-    if (selectedProjectId) {
-      await queryClient.invalidateQueries({
-        queryKey: [`${apiName.projects.detail}/${selectedProjectId}`],
-      });
-    }
-
-    await queryClient.invalidateQueries({ queryKey: [apiName.tasks.list] });
-    await queryClient.invalidateQueries({ queryKey: [apiName.tasks.search] });
-    await queryClient.refetchQueries({ queryKey: [apiName.tasks.search], type: "active" });
-  };
 
   const handleTaskUpdated = (updatedTask: Task) => {
     setSelectedTask(updatedTask);
@@ -895,7 +1019,6 @@ const TaskList = ({
       }
 
       toast.success(language === "vi" ? "Đã tạo task mới" : "New task created");
-      void refreshTaskBoardQueries();
     },
     onError: (error) => {
       toast.error(extractApiErrorMessage(error, "Tạo task thất bại"));
@@ -1265,7 +1388,6 @@ const TaskList = ({
                     <TableHead>{t("taskBoard.tablePriority")}</TableHead>
                     <TableHead>{t("taskBoard.tableAssignee")}</TableHead>
                     <TableHead>{t("taskBoard.tableDueDate")}</TableHead>
-                    <TableHead>{t("taskBoard.tableChecklist")}</TableHead>
                     <TableHead className="text-right">{t("taskBoard.tableActions")}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1278,8 +1400,13 @@ const TaskList = ({
                           <p className="font-medium text-foreground">{task.title}</p>
                           <div className="flex flex-wrap gap-1">
                             {task.tags.slice(0, 2).map((tag) => (
-                              <Badge key={tag} variant="secondary" className="text-[10px]">
-                                {tag}
+                              <Badge
+                                key={`${tag.title}-${tag.color ?? "default"}`}
+                                variant="secondary"
+                                className="border text-[10px] text-white"
+                                style={{ backgroundColor: tag.color ?? "#64748b" }}
+                              >
+                                {tag.title}
                               </Badge>
                             ))}
                           </div>
@@ -1320,21 +1447,13 @@ const TaskList = ({
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Avatar className="h-7 w-7">
-                            <AvatarImage src={task.assigneeAvatar} alt={task.assignee} />
-                            <AvatarFallback className="text-xs">{initials(task.assignee)}</AvatarFallback>
+                            <AvatarImage src={task.assigneeAvatar} alt={task.assignee || t("taskBoard.unassigned")} />
+                            <AvatarFallback className="text-xs">{initials(task.assignee || t("taskBoard.unassigned"))}</AvatarFallback>
                           </Avatar>
-                          <span className="text-sm">{task.assignee}</span>
+                          <span className={cn("text-sm", !task.assignee && "text-muted-foreground")}>{task.assignee || t("taskBoard.unassigned")}</span>
                         </div>
                       </TableCell>
                       <TableCell>{formatDate(task.dueDate, language)}</TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium">
-                            {task.checklistDone}/{task.checklistTotal}
-                          </p>
-                          <p className="text-xs text-muted-foreground">{t("taskBoard.tableChecklist")}</p>
-                        </div>
-                      </TableCell>
                       <TableCell>
                         <div className="flex items-center justify-end gap-1">
                           <Button
@@ -1394,7 +1513,7 @@ const TaskList = ({
           isTaskLoading ? (
             <SprintBoardLoading />
           ) : (
-            <DndContext sensors={sensor} collisionDetection={pointerWithin} onDragEnd={handleDragEnd}>
+            <DndContext sensors={sensor} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
               <div className="pb-2">
                 <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 2xl:grid-cols-4">
                   {statusOrder.map((status) => {
@@ -1429,15 +1548,15 @@ const TaskList = ({
       </CardContent>
 
       {viewMode === "table" ? (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/70 bg-muted/30 px-3 py-2 text-sm dark:bg-card/70">
-          <span className="text-muted-foreground">
+        <div className="flex flex-col gap-2 rounded-md border border-border/70 bg-muted/30 px-3 py-2 text-sm dark:bg-card/70 sm:flex-row sm:items-center sm:justify-between">
+          <span className="text-xs text-muted-foreground">
             {language === "vi"
               ? `Hiển thị ${totalTasks === 0 ? 0 : pageStart + 1}-${pageEnd} / ${totalTasks} task`
               : `Showing ${totalTasks === 0 ? 0 : pageStart + 1}-${pageEnd} of ${totalTasks} tasks`}
           </span>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
             <Select value={String(pageSize)} onValueChange={(value) => setPageSize(Number(value))}>
-              <SelectTrigger className="h-8 w-[110px]">
+              <SelectTrigger className="h-8 w-[104px]">
                 <SelectValue placeholder={language === "vi" ? "Số lượng" : "Rows"} />
               </SelectTrigger>
               <SelectContent>
@@ -1449,23 +1568,25 @@ const TaskList = ({
               </SelectContent>
             </Select>
 
-            <Button variant="outline" size="sm" onClick={() => setCurrentPage(1)} disabled={safeCurrentPage === 1}>
+            <Button variant="outline" size="sm" className="hidden h-8 sm:inline-flex" onClick={() => setCurrentPage(1)} disabled={safeCurrentPage === 1}>
               {language === "vi" ? "Đầu" : "First"}
             </Button>
             <Button
               variant="outline"
               size="sm"
+              className="h-8"
               onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
               disabled={safeCurrentPage === 1}
             >
               {language === "vi" ? "Trước" : "Prev"}
             </Button>
-            <span className="min-w-20 text-center text-xs text-muted-foreground">
+            <span className="flex h-8 min-w-20 items-center justify-center rounded-md border border-border/70 bg-background/70 px-2 text-xs text-muted-foreground">
               {language === "vi" ? `Trang ${safeCurrentPage}/${totalPages}` : `Page ${safeCurrentPage}/${totalPages}`}
             </span>
             <Button
               variant="outline"
               size="sm"
+              className="h-8"
               onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
               disabled={safeCurrentPage >= totalPages || !(searchedTaskPage?.hasNext ?? false)}
             >
@@ -1474,6 +1595,7 @@ const TaskList = ({
             <Button
               variant="outline"
               size="sm"
+              className="hidden h-8 sm:inline-flex"
               onClick={() => setCurrentPage(totalPages)}
               disabled={safeCurrentPage === totalPages}
             >

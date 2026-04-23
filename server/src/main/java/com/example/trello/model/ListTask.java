@@ -35,7 +35,7 @@ public class ListTask extends AbstractEntity implements Serializable {
 
     Long orderIndex;
 
-    @ManyToOne(cascade = CascadeType.ALL)
+    @ManyToOne
     @JoinColumn(name = "project_id")
     Project project;
 

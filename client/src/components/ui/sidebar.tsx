@@ -18,6 +18,7 @@ const SIDEBAR_WIDTH = "16rem";
 const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
+const SIDEBAR_OVERLAY_BREAKPOINT = 1280;
 
 type SidebarContext = {
   state: "expanded" | "collapsed";
@@ -26,6 +27,7 @@ type SidebarContext = {
   openMobile: boolean;
   setOpenMobile: (open: boolean) => void;
   isMobile: boolean;
+  isOverlay: boolean;
   toggleSidebar: () => void;
 };
 
@@ -40,6 +42,24 @@ function useSidebar() {
   return context;
 }
 
+function useIsSidebarOverlay() {
+  const [isOverlay, setIsOverlay] = React.useState<boolean | undefined>(undefined);
+
+  React.useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${SIDEBAR_OVERLAY_BREAKPOINT - 1}px)`);
+    const onChange = () => {
+      setIsOverlay(window.innerWidth < SIDEBAR_OVERLAY_BREAKPOINT);
+    };
+
+    mql.addEventListener("change", onChange);
+    setIsOverlay(window.innerWidth < SIDEBAR_OVERLAY_BREAKPOINT);
+
+    return () => mql.removeEventListener("change", onChange);
+  }, []);
+
+  return !!isOverlay;
+}
+
 const SidebarProvider = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div"> & {
@@ -49,6 +69,7 @@ const SidebarProvider = React.forwardRef<
   }
 >(({ defaultOpen = true, open: openProp, onOpenChange: setOpenProp, className, style, children, ...props }, ref) => {
   const isMobile = useIsMobile();
+  const isOverlay = useIsSidebarOverlay();
   const [openMobile, setOpenMobile] = React.useState(false);
 
   // This is the internal state of the sidebar.
@@ -72,8 +93,8 @@ const SidebarProvider = React.forwardRef<
 
   // Helper to toggle the sidebar.
   const toggleSidebar = React.useCallback(() => {
-    return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open);
-  }, [isMobile, setOpen, setOpenMobile]);
+    return isOverlay ? setOpenMobile((open) => !open) : setOpen((open) => !open);
+  }, [isOverlay, setOpen, setOpenMobile]);
 
   // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {
@@ -98,11 +119,12 @@ const SidebarProvider = React.forwardRef<
       open,
       setOpen,
       isMobile,
+      isOverlay,
       openMobile,
       setOpenMobile,
       toggleSidebar,
     }),
-    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar],
+    [state, open, setOpen, isMobile, isOverlay, openMobile, setOpenMobile, toggleSidebar],
   );
 
   return (
@@ -136,7 +158,7 @@ const Sidebar = React.forwardRef<
     collapsible?: "offcanvas" | "icon" | "none";
   }
 >(({ side = "left", variant = "sidebar", collapsible = "offcanvas", className, children, ...props }, ref) => {
-  const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
+  const { isOverlay, state, openMobile, setOpenMobile } = useSidebar();
 
   if (collapsible === "none") {
     return (
@@ -150,7 +172,7 @@ const Sidebar = React.forwardRef<
     );
   }
 
-  if (isMobile) {
+  if (isOverlay) {
     return (
       <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
         <SheetContent
@@ -442,7 +464,7 @@ const SidebarMenuButton = React.forwardRef<
   } & VariantProps<typeof sidebarMenuButtonVariants>
 >(({ asChild = false, isActive = false, variant = "default", size = "default", tooltip, className, ...props }, ref) => {
   const Comp = asChild ? Slot : "button";
-  const { isMobile, state } = useSidebar();
+  const { isMobile, isOverlay, state } = useSidebar();
 
   const button = (
     <Comp
@@ -468,7 +490,7 @@ const SidebarMenuButton = React.forwardRef<
   return (
     <Tooltip>
       <TooltipTrigger asChild>{button}</TooltipTrigger>
-      <TooltipContent side="right" align="center" hidden={state !== "collapsed" || isMobile} {...tooltip} />
+      <TooltipContent side="right" align="center" hidden={state !== "collapsed" || isMobile || isOverlay} {...tooltip} />
     </Tooltip>
   );
 });

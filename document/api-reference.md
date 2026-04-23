@@ -44,9 +44,9 @@ Response chung:
 ## 5. Notifications
 - `POST /notifications/admin/create`
 - `GET /notifications/admin/list`
+- `DELETE /notifications/admin/{notificationId}`
 - `GET /notifications/my/list`
 - `PATCH /notifications/{notificationId}/read`
-- `PATCH /notifications/admin/retry/{notificationId}`
 
 ## 6. Chat
 ### Direct

@@ -3,6 +3,7 @@ package com.example.trello.dto.response;
 import com.example.trello.constants.NotificationChannel;
 import com.example.trello.constants.NotificationStatus;
 import com.example.trello.constants.NotificationType;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
@@ -32,6 +33,7 @@ public class NotificationResponse {
 
     NotificationStatus status;
 
+    @JsonProperty("isRead")
     boolean isRead;
 
     int retryCount;

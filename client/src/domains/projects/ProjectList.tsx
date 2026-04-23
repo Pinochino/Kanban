@@ -10,27 +10,29 @@ import {
 import { IProject } from "@/types/ProjectInterface";
 import { ChevronRight, FolderKanban, UserRound } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const ProjectList = ({
     projectList,
 }: {
     projectList: IProject[];
 }) => {
+    const { t } = useI18n();
     const projects = (Array.isArray(projectList) && Array.from(projectList)) || [];
 
     return (
         <Card>
             <CardHeader className="space-y-3">
-                <CardTitle>Danh sách Projects</CardTitle>
+                <CardTitle>{t("projectList.title")}</CardTitle>
                 <CardDescription>
-                    Trang này tách riêng cho project. Chọn project để mở trang task riêng của project đó.
+                    {t("projectList.description")}
                 </CardDescription>
             </CardHeader>
 
             <CardContent className="space-y-3">
                 {projects.length === 0 ? (
                     <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-                        Chưa có project nào để hiển thị.
+                        {t("projectList.empty")}
                     </div>
                 ) : (
                     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -57,7 +59,7 @@ const ProjectList = ({
                                             <div className="min-w-0 space-y-1">
                                                 <p className="line-clamp-2 font-semibold">{project.title}</p>
                                                 <p className="line-clamp-2 text-xs text-muted-foreground">
-                                                    {project.description || "Không có mô tả"}
+                                                    {project.description || t("projectList.noDescription")}
                                                 </p>
                                             </div>
                                             <FolderKanban className="h-5 w-5 shrink-0 text-primary" />
@@ -66,15 +68,15 @@ const ProjectList = ({
                                         <div className="flex items-center justify-between text-xs text-muted-foreground">
                                             <span className="inline-flex items-center gap-1">
                                                 <UserRound className="h-3.5 w-3.5" />
-                                                {project?.createdBy?.username || "Unknown"}
+                                                {project?.createdBy?.username || t("projectList.unknownOwner")}
                                             </span>
                                             <Badge variant="outline">ID: {project.id}</Badge>
                                         </div>
 
                                         <div className="space-y-1.5">
-                                            <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                                <span>Progress</span>
-                                                <span>
+                                            <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                                                <span className="shrink-0">{t("projectList.progress")}</span>
+                                                <span className="shrink-0 whitespace-nowrap text-right tabular-nums">
                                                     {doneTasks}/{totalTasks} ({progress}%)
                                                 </span>
                                             </div>
@@ -93,7 +95,7 @@ const ProjectList = ({
                                         >
                                             <Link to={`/projects/${project.id}/tasks`}>
                                                 <ChevronRight className="h-4 w-4" />
-                                                Mở task của project
+                                                {t("projectList.openTasks")}
                                             </Link>
                                         </Button>
                                     </CardContent>

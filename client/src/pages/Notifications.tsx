@@ -12,6 +12,8 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { INotification } from "@/types/NotificationInterface";
 
+type NotificationApiItem = INotification & { read?: boolean };
+
 const getNotificationTypeLabel = (type: string, t: (key: string) => string) => {
   switch (type) {
     case "TASK_ASSIGNED":
@@ -33,8 +35,63 @@ const getChannelLabel = (channel: string, t: (key: string) => string) => {
   return channel;
 };
 
+const replaceTaskWordForVietnamese = (value: string) => {
+  return value.replace(/\btask\b/gi, "nhiệm vụ");
+};
+
+const localizeNotificationTitle = (
+  notification: INotification,
+  language: "vi" | "en",
+  t: (key: string) => string,
+) => {
+  const rawTitle = String(notification.title ?? "").trim();
+
+  if (!rawTitle) {
+    return getNotificationTypeLabel(notification.type, t);
+  }
+
+  if (language === "vi") {
+    if (notification.type === "TASK_ASSIGNED" && /new\s+task\s+assigned/i.test(rawTitle)) {
+      return t("notification.taskAssignedTitle");
+    }
+
+    return replaceTaskWordForVietnamese(rawTitle);
+  }
+
+  return rawTitle;
+};
+
+const localizeNotificationMessage = (
+  notification: INotification,
+  language: "vi" | "en",
+) => {
+  const rawMessage = String(notification.message ?? "").trim();
+
+  if (!rawMessage) {
+    return "";
+  }
+
+  if (language !== "vi") {
+    return rawMessage;
+  }
+
+  const assignedTaskMatch = rawMessage.match(/You have been assigned task ['"](.+?)['"] by (.+?)\.?$/i);
+
+  if (assignedTaskMatch) {
+    const [, taskName, assigner] = assignedTaskMatch;
+    return `Bạn được giao nhiệm vụ '${taskName}' bởi ${assigner}.`;
+  }
+
+  return replaceTaskWordForVietnamese(rawMessage);
+};
+
+const normalizeNotification = (item: NotificationApiItem): INotification => ({
+  ...item,
+  isRead: typeof item.isRead === "boolean" ? item.isRead : Boolean(item.read),
+});
+
 const Notifications = () => {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const { user } = useCurrentUser();
   const queryClient = useQueryClient();
 
@@ -52,7 +109,9 @@ const Notifications = () => {
       });
 
       const payload = res.data?.data;
-      return Array.isArray(payload) ? (payload as INotification[]) : [];
+      return Array.isArray(payload)
+        ? (payload as NotificationApiItem[]).map(normalizeNotification)
+        : [];
     },
   });
 
@@ -129,13 +188,21 @@ const Notifications = () => {
           ) : (
             <div className="space-y-3">
               {notifications.map((notification) => (
+                (() => {
+                  const localizedTitle = localizeNotificationTitle(notification, language, t);
+                  const localizedMessage = localizeNotificationMessage(notification, language);
+                  const localizedDate = new Date(notification.deliveredAt || notification.createdAt).toLocaleString(
+                    language === "vi" ? "vi-VN" : "en-US",
+                  );
+
+                  return (
                 <div
                   key={notification.id}
                   className={`flex flex-col gap-3 rounded-lg border p-4 transition md:flex-row md:items-start md:justify-between ${notification.isRead ? "bg-muted/20" : "bg-muted/40"}`}
                 >
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-semibold">{notification.title}</h3>
+                      <h3 className="font-semibold">{localizedTitle}</h3>
                       <span className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
                         {getNotificationTypeLabel(notification.type, t)}
                       </span>
@@ -143,9 +210,9 @@ const Notifications = () => {
                         {getChannelLabel(notification.channel, t)}
                       </span>
                     </div>
-                    <p className="text-sm text-muted-foreground">{notification.message}</p>
+                    <p className="text-sm text-muted-foreground">{localizedMessage}</p>
                     <p className="text-xs text-muted-foreground">
-                      {new Date(notification.deliveredAt || notification.createdAt).toLocaleString()}
+                      {localizedDate}
                     </p>
                   </div>
 
@@ -164,6 +231,8 @@ const Notifications = () => {
                     <div className="text-xs text-muted-foreground">{t("notification.read")}</div>
                   )}
                 </div>
+                  );
+                })()
               ))}
             </div>
           )}

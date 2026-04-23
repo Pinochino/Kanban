@@ -57,10 +57,7 @@ public class Project extends AbstractEntity implements Serializable {
     @JsonManagedReference
     List<ListTask> listTasks = new ArrayList<>();
 
-    @Builder.Default
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "project", orphanRemoval = true)
-    @JsonManagedReference
-    List<Label> listLabels = new ArrayList<>();
+
 
 
 }
